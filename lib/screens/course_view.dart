@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/course.dart';
+import '../models/user_state.dart';
 import '../services/app_state.dart';
 import 'package:provider/provider.dart';
 import '../widgets/common.dart';
@@ -284,7 +285,12 @@ class _QuizTab extends StatelessWidget {
     if (course.quiz.isEmpty) {
       return const Center(child: Text('Aucun quiz pour ce cours.'));
     }
-    return QuizRunner(questions: course.quiz);
+    return QuizRunner(
+      key: ValueKey('quiz-${course.id}'),
+      questions: course.quiz,
+      scopeId: course.id,
+      skill: _skillFor(course.category),
+    );
   }
 }
 
@@ -302,8 +308,10 @@ class _ExercisesTab extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Terminez ce cours pour valider les exercices et gagner les XP.',
+        Text(
+          'Terminez ce cours pour valider les exercices. Chaque exercice '
+          'rapporte ${course.xp ~/ 2} XP une seule fois ; vous pouvez le refaire '
+          'autant que vous voulez pour vous entraîner.',
         ),
         const SizedBox(height: 16),
         for (var i = 0; i < course.exercises.length; i++)
@@ -333,32 +341,7 @@ class _ExercisesTab extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(course.exercises[i].instruction),
                   const SizedBox(height: 8),
-                  Consumer<AppState>(
-                    builder: (context, app, _) {
-                      final done = app.user.completedCourses.contains(
-                        course.id,
-                      );
-                      return FilledButton.tonalIcon(
-                        onPressed: done
-                            ? () {
-                                app.addXp(
-                                  course.xp ~/ 2,
-                                  skill: _skillFor(course.category),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '+${course.xp ~/ 2} XP (exercices validés)',
-                                    ),
-                                  ),
-                                );
-                              }
-                            : null,
-                        icon: const Icon(Icons.fitness_center),
-                        label: const Text('Valider les exercices'),
-                      );
-                    },
-                  ),
+                  _ExerciseButton(course: course, index: i),
                 ],
               ),
             ),
@@ -409,21 +392,73 @@ class _MarkCompleteButton extends StatelessWidget {
           );
         }
         return FilledButton.icon(
-          onPressed: () {
-            app.completeCourse(
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final gained = await app.completeCourse(
               course.id,
-              _skillFor(course.category),
               course.xp,
+              skill: _skillFor(course.category),
             );
-            app.addXp(course.xp, skill: _skillFor(course.category));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Cours terminé ! +${course.xp} XP')),
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  gained > 0
+                      ? 'Cours terminé ! +$gained XP'
+                      : 'Cours terminé (XP déjà obtenus).',
+                ),
+              ),
             );
           },
           icon: const Icon(Icons.emoji_events),
           label: Text('Terminer le cours (+${course.xp} XP)'),
         );
       },
+    );
+  }
+}
+
+class _ExerciseButton extends StatelessWidget {
+  final Course course;
+  final int index;
+  const _ExerciseButton({required this.course, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final courseDone = app.user.completedCourses.contains(course.id);
+    final rewarded = app.isRewarded(
+      RewardKeys.exercise(exerciseId(course.id, index)),
+    );
+    final xp = course.xp ~/ 2;
+    if (rewarded) {
+      return const Chip(
+        avatar: Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
+        label: Text('Exercice validé (XP obtenus)'),
+      );
+    }
+    return FilledButton.tonalIcon(
+      onPressed: courseDone
+          ? () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final gained = await app.completeExercise(
+                course.id,
+                index,
+                xp,
+                skill: _skillFor(course.category),
+              );
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    gained > 0
+                        ? '+$gained XP (exercice validé)'
+                        : 'Exercice déjà validé : pas de nouveaux XP.',
+                  ),
+                ),
+              );
+            }
+          : null,
+      icon: const Icon(Icons.fitness_center),
+      label: Text('Valider l\'exercice (+$xp XP)'),
     );
   }
 }

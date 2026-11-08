@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/app_state.dart';
 import 'home_screen.dart';
 import 'learn_screen.dart';
 import 'lab_screen.dart';
@@ -31,7 +33,14 @@ class _RootShellState extends State<RootShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: _buildDrawer(context),
-      body: IndexedStack(index: _index, children: _screens),
+      body: Column(
+        children: [
+          const _StatusBanners(),
+          Expanded(
+            child: IndexedStack(index: _index, children: _screens),
+          ),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -123,4 +132,44 @@ class _RootShellState extends State<RootShell> {
 
 class CyberLabSeed {
   static const blue = Color(0xFF5B8DEF);
+}
+
+/// Bandeaux d'erreur de sauvegarde et d'avertissements de migration :
+/// aucune perte de données n'est silencieuse.
+class _StatusBanners extends StatelessWidget {
+  const _StatusBanners();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final items = [if (app.saveError != null) app.saveError!, ...app.warnings];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return SafeArea(
+      bottom: false,
+      child: Material(
+        color: Colors.orange.withValues(alpha: 0.18),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  items.join('\n'),
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              if (app.warnings.isNotEmpty)
+                IconButton(
+                  tooltip: 'Masquer',
+                  onPressed: app.dismissWarnings,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

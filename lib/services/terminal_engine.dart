@@ -1,16 +1,173 @@
+/// Résultat de l'analyse du Command Guard.
+class GuardVerdict {
+  final bool blocked;
+  final String reason;
+  const GuardVerdict.allow() : blocked = false, reason = '';
+  const GuardVerdict.block(this.reason) : blocked = true;
+}
+
+/// Command Guard : RÈGLE PÉDAGOGIQUE du simulateur.
+///
+/// Le terminal n'exécute jamais rien sur l'appareil ; ce garde-fou sert à
+/// apprendre la prudence en refusant des commandes qui seraient
+/// destructrices sur un vrai système. Ce n'est pas une protection système.
+///
+/// Règles :
+/// - `rm` avec suppression récursive ET forcée, quelle que soit l'écriture :
+///   `-rf`, `-fr`, `-r -f`, `-Rf`, `--recursive --force`, `-r --force`… ;
+/// - `dd` avec un argument `of=` (écriture brute vers un fichier ou un
+///   périphérique) ;
+/// - chaque segment d'une chaîne (`;`, `&&`, `||`, `|`) est analysé, et les
+///   préfixes `sudo`, `env`, `nohup`, `time`, `command` sont ignorés.
+/// Seule la commande réellement invoquée compte : `echo "rm -rf /"` ou
+/// `man rm` ne sont pas bloqués.
+class CommandGuard {
+  CommandGuard._();
+
+  static const _prefixes = {'sudo', 'env', 'nohup', 'time', 'command', 'exec'};
+
+  static GuardVerdict check(String input) {
+    for (final segment in splitSegments(input)) {
+      final words = segment.map(_unquote).toList();
+      var i = 0;
+      // Préfixes et leurs options (sudo -u root, env VAR=1…).
+      while (i < words.length) {
+        final w = words[i];
+        if (_prefixes.contains(w)) {
+          i++;
+          while (i < words.length &&
+              (words[i].startsWith('-') || words[i].contains('='))) {
+            if (words[i] == '-u' || words[i] == '-g') i++;
+            i++;
+          }
+          continue;
+        }
+        if (w.contains('=') && !w.startsWith('-') && i == 0) {
+          i++; // VAR=valeur commande
+          continue;
+        }
+        break;
+      }
+      if (i >= words.length) continue;
+      final cmd = words[i].split('/').last;
+      final args = words.sublist(i + 1);
+      if (cmd == 'rm' && _isRecursiveForce(args)) {
+        return const GuardVerdict.block(
+          'suppression récursive forcée (rm -r + -f)',
+        );
+      }
+      if (cmd == 'dd' && args.any((a) => a.startsWith('of='))) {
+        return const GuardVerdict.block('écriture brute dd (of=)');
+      }
+    }
+    return const GuardVerdict.allow();
+  }
+
+  static bool _isRecursiveForce(List<String> args) {
+    var recursive = false, force = false;
+    for (final a in args) {
+      if (a == '--') break; // la suite n'est que des noms de fichiers
+      if (a.startsWith('--')) {
+        if (a == '--recursive') recursive = true;
+        if (a == '--force') force = true;
+      } else if (a.startsWith('-') && a.length > 1) {
+        final flags = a.substring(1);
+        if (flags.contains('r') || flags.contains('R')) recursive = true;
+        if (flags.contains('f')) force = true;
+      }
+    }
+    return recursive && force;
+  }
+
+  static String _unquote(String w) {
+    final b = StringBuffer();
+    String? quote;
+    for (final ch in w.split('')) {
+      if (quote == null && (ch == '"' || ch == "'")) {
+        quote = ch;
+      } else if (ch == quote) {
+        quote = null;
+      } else {
+        b.write(ch);
+      }
+    }
+    return b.toString();
+  }
+
+  /// Découpe en segments (`;`, `&&`, `||`, `|`, `&`) hors guillemets, puis en
+  /// mots (les guillemets sont conservés dans les mots).
+  static List<List<String>> splitSegments(String input) {
+    final segments = <List<String>>[];
+    var words = <String>[];
+    final buf = StringBuffer();
+    String? quote;
+    void endWord() {
+      if (buf.isNotEmpty) {
+        words.add(buf.toString());
+        buf.clear();
+      }
+    }
+
+    void endSegment() {
+      endWord();
+      if (words.isNotEmpty) segments.add(words);
+      words = <String>[];
+    }
+
+    for (var i = 0; i < input.length; i++) {
+      final c = input[i];
+      if (quote != null) {
+        buf.write(c);
+        if (c == quote) quote = null;
+      } else if (c == '"' || c == "'") {
+        quote = c;
+        buf.write(c);
+      } else if (c == ';' || c == '|' || c == '&' || c == '\n') {
+        endSegment();
+      } else if (c == ' ' || c == '\t') {
+        endWord();
+      } else {
+        buf.write(c);
+      }
+    }
+    endSegment();
+    return segments;
+  }
+}
+
 /// Simulated Linux terminal engine. Safe, no real system calls.
 class TerminalEngine {
   final Map<String, int> _attempts = {};
   String user = 'learner';
   String host = 'cyberlab';
 
+  /// Règle pédagogique activée par défaut (voir [CommandGuard]).
+  bool guardEnabled = true;
+
   String get prompt => '$user@$host:~\$';
+
+  static const guardMessage =
+      'COMMAND GUARD (règle pédagogique du simulateur) : commande destructrice '
+      'détectée et refusée.\n'
+      'Ce terminal est simulé et n\'exécute rien sur votre appareil ; la règle '
+      'sert à prendre de bons réflexes. Sur un vrai système, cette commande '
+      'pourrait détruire des données de façon irréversible.';
 
   /// Runs a command in the sandbox. Returns the full output (with prompt echo removed).
   CommandResult run(String input) {
     final raw = input.trim();
     if (raw.isEmpty) {
       return CommandResult(output: '', exitCode: 0);
+    }
+    if (guardEnabled) {
+      final verdict = CommandGuard.check(raw);
+      if (verdict.blocked) {
+        return CommandResult(
+          output: '$guardMessage\nMotif : ${verdict.reason}.',
+          exitCode: 1,
+          blocked: true,
+        );
+      }
     }
     final parts = _tokenize(raw);
     if (parts.isEmpty) return CommandResult(output: '', exitCode: 0);
@@ -104,14 +261,14 @@ class TerminalEngine {
         return ok(_docker(args));
       case 'apt':
         return ok(_apt(args));
+      case 'rm':
+        return ok(
+          args.isEmpty
+              ? 'rm: opérande manquant (simulation)'
+              : '(simulation) suppression simulée : ${args.where((a) => !a.startsWith('-')).join(' ')}\n'
+                    '>>>  Aucun fichier réel n\'a été touché. Sur un vrai système, rm est définitif (pas de corbeille).',
+        );
       default:
-        if (raw.contains('rm -rf')) {
-          return CommandResult(
-            output:
-                'cmd: commande destructrice détectée.\n>>>  GUARD: cette simulation bloque volontairement "rm -rf" pour éviter toute habitude dangereuse.\n>>>  En environnement réel, rm -rf peut détruire des fichiers irrécupérables.',
-            exitCode: 1,
-          );
-        }
         return CommandResult(
           output:
               'bash: $cmd: commande introuvable (simulation)\n'
@@ -157,7 +314,7 @@ Commandes Linux simulées disponibles:
   pwd, ls, cd, cat, echo, whoami, hostname, date, uname
   ifconfig/ip, ping, nmap, ps, grep, find, sort, wc, head, tail
   awk, sed, chmod, chown, curl/wget, ssh, sudo, man, df, free
-  tree, history, which, docker, apt, clear, help, exit
+  rm, tree, history, which, docker, apt, clear, help, exit
 
 Tapez "man <commande>" pour la documentation. Ex: man nmap''';
 
@@ -401,9 +558,13 @@ class CommandResult {
   final int exitCode;
   final bool clear;
 
+  /// Vrai si la commande a été refusée par le Command Guard.
+  final bool blocked;
+
   CommandResult({
     required this.output,
     required this.exitCode,
     this.clear = false,
+    this.blocked = false,
   });
 }

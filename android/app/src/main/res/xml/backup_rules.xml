@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sauvegarde Android (API 23 à 30) : LISTE BLANCHE.
+  Seules les préférences de l'application (progression, notes, réglages
+  non secrets, historique du coach) sont sauvegardées. Les fichiers du
+  stockage sécurisé (clés API chiffrées, quel que soit leur nom) ne sont
+  jamais inclus : leurs clés Keystore ne sont de toute façon pas
+  restaurables sur un autre appareil.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+</full-backup-content>

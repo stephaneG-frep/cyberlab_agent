@@ -4,15 +4,23 @@ import '../models/course.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
 
-/// A reusable quiz runner that tracks answers, awards XP and shows explanations.
+/// Quiz réutilisable : suit les réponses, attribue les XP via la couche
+/// métier (une fois par question réussie) et affiche les explications.
 class QuizRunner extends StatefulWidget {
   final List<QuizQuestion> questions;
-  final int xpPerCorrect;
+
+  /// Identifiant du cours : les questions sont identifiées par
+  /// `<scopeId>/<id question>` (les ids « q1 »… se répètent entre cours).
+  final String scopeId;
+
+  /// Compétence créditée avec les XP.
+  final String? skill;
 
   const QuizRunner({
     super.key,
     required this.questions,
-    this.xpPerCorrect = 15,
+    required this.scopeId,
+    this.skill,
   });
 
   @override
@@ -21,31 +29,59 @@ class QuizRunner extends StatefulWidget {
 
 class _QuizRunnerState extends State<QuizRunner> {
   int _index = 0;
-  bool _answered = false;
   String? _selected;
-  String _freeAnswer = '';
+  final TextEditingController _free = TextEditingController();
   int _score = 0;
   bool _hintShown = false;
+  bool _submitting = false;
+  QuizOutcome? _outcome;
 
-  QuizQuestion get _q => widget.questions[_index];
+  bool get _answered => _outcome != null;
+
+  @override
+  void dispose() {
+    _free.dispose();
+    super.dispose();
+  }
+
+  bool _isChoice(QuizQuestion q) =>
+      q.type == QuizType.qcm || q.type == QuizType.trueFalse;
+
+  String _currentAnswer(QuizQuestion q) =>
+      _isChoice(q) ? (_selected ?? '') : _free.text;
+
+  bool _canSubmit(QuizQuestion q) =>
+      !_answered && !_submitting && _currentAnswer(q).trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
-    final q = _q;
+    if (widget.questions.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('Aucune question disponible pour ce quiz.'),
+        ),
+      );
+    }
+    final q = widget.questions[_index];
+    final total = widget.questions.length;
+    // ListView : défilement garanti sur petit écran et clavier ouvert.
     return ListView(
-      padding: const EdgeInsets.all(16),
+      key: const ValueKey('quiz-list'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
         Text(
-          'Question ${_index + 1}/${widget.questions.length}',
+          'Question ${_index + 1}/$total · ${q.xp} XP',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        const SizedBox(height: 4),
         LinearProgressIndicator(
-          value: (_index + 1) / widget.questions.length,
+          value: (_index + 1) / total,
           minHeight: 6,
           color: CyberLabSeed.blue,
         ),
         const SizedBox(height: 12),
-        if (q.codeSnippet != null)
+        if (q.codeSnippet != null) ...[
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(10),
@@ -58,7 +94,8 @@ class _QuizRunnerState extends State<QuizRunner> {
               style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
             ),
           ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         Text(q.question, style: const TextStyle(fontSize: 16, height: 1.4)),
         const SizedBox(height: 16),
         ..._buildInput(q),
@@ -75,39 +112,23 @@ class _QuizRunnerState extends State<QuizRunner> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: _callout(
-              'Indice : la réponse est "${_reviewHint(q)}" (répondez et validez pour voir l\'explication)',
+              'Indice : ${q.hintText}',
               Icons.tips_and_updates,
               Colors.amber,
             ),
           ),
-        const Spacer(),
         const SizedBox(height: 16),
         if (_answered)
           _explanationBox(q, context)
         else
           FilledButton.icon(
-            onPressed: _canSubmit ? () => _submit(q) : null,
+            key: const ValueKey('quiz-submit'),
+            onPressed: _canSubmit(q) ? () => _submit(q) : null,
             icon: const Icon(Icons.check),
             label: const Text('Valider'),
           ),
       ],
     );
-  }
-
-  String _reviewHint(QuizQuestion q) {
-    if (q.type == QuizType.qcm && q.options != null) {
-      final idx = int.tryParse(q.correct) ?? 0;
-      if (idx < q.options!.length) {
-        return q.options![idx];
-      }
-    }
-    return q.correct;
-  }
-
-  bool get _canSubmit {
-    return !_answered &&
-        (_selected != null ||
-            (_q.type != QuizType.qcm && _freeAnswer.trim().isNotEmpty));
   }
 
   List<Widget> _buildInput(QuizQuestion q) {
@@ -157,36 +178,69 @@ class _QuizRunnerState extends State<QuizRunner> {
             ),
           ),
         ];
-      default:
+      case QuizType.free:
+      case QuizType.practical:
         return [
           TextField(
+            key: const ValueKey('quiz-free-answer'),
+            controller: _free,
             enabled: !_answered,
-            decoration: const InputDecoration(hintText: 'Votre réponse...'),
-            onChanged: (v) => _freeAnswer = v,
+            decoration: InputDecoration(
+              hintText: q.type == QuizType.practical
+                  ? 'Votre commande...'
+                  : 'Votre réponse...',
+              border: const OutlineInputBorder(),
+            ),
+            // Actualise l'état du bouton Valider à chaque saisie.
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) {
+              if (_canSubmit(q)) _submit(q);
+            },
           ),
         ];
     }
   }
 
-  void _submit(QuizQuestion q) {
-    final answer = q.type == QuizType.qcm || q.type == QuizType.trueFalse
-        ? _selected ?? ''
-        : _freeAnswer;
-    final correct = q.isCorrect(answer);
-    if (correct) _score++;
-    final app = context.read<AppState>();
-    app.recordQuizResult(q.id, correct);
-    if (correct) app.addXp(widget.xpPerCorrect);
+  Future<void> _submit(QuizQuestion q) async {
+    final answer = _currentAnswer(q);
+    if (answer.trim().isEmpty) return; // jamais de réponse vide
+    setState(() => _submitting = true);
+    final outcome = await context.read<AppState>().answerQuiz(
+      widget.scopeId,
+      q,
+      answer,
+      skill: widget.skill,
+    );
+    if (!mounted) return;
     setState(() {
-      _answered = true;
-      _selected = correct
-          ? (q.type == QuizType.trueFalse ? answer : answer)
-          : _selected;
+      _submitting = false;
+      _outcome = outcome;
+      if (outcome.correct) _score++;
     });
   }
 
+  void _resetQuestionState() {
+    _outcome = null;
+    _selected = null;
+    _free.clear(); // vide aussi le champ visible
+    _hintShown = false;
+    _submitting = false;
+  }
+
   Widget _explanationBox(QuizQuestion q, BuildContext context) {
-    final correct = _isCorrect;
+    final outcome = _outcome!;
+    final correct = outcome.correct;
+    final String subtitle;
+    if (correct) {
+      subtitle = outcome.xpGained > 0
+          ? '+${outcome.xpGained} XP gagnés'
+          : 'Question déjà réussie auparavant : pas de nouveaux XP.';
+    } else {
+      subtitle =
+          'La bonne réponse : ${q.displayCorrect}\n'
+          'Vous pourrez encore gagner ${q.xp} XP en la réussissant plus tard.';
+    }
+    final last = _index + 1 >= widget.questions.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -200,9 +254,7 @@ class _QuizRunnerState extends State<QuizRunner> {
               color: correct ? Colors.greenAccent : Colors.redAccent,
             ),
             title: Text(correct ? 'Bonne réponse !' : 'Réponse incorrecte'),
-            subtitle: Text(
-              correct ? '${q.xp} XP gagnés' : 'La bonne réponse : ${q.correct}',
-            ),
+            subtitle: Text(subtitle),
           ),
         ),
         const SizedBox(height: 8),
@@ -224,52 +276,52 @@ class _QuizRunnerState extends State<QuizRunner> {
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
+          key: const ValueKey('quiz-next'),
           onPressed: () {
-            if (_index + 1 < widget.questions.length) {
+            if (!last) {
               setState(() {
                 _index++;
-                _answered = false;
-                _selected = null;
-                _freeAnswer = '';
-                _hintShown = false;
+                _resetQuestionState();
               });
             } else {
               _finish();
             }
           },
-          icon: Icon(
-            _index + 1 < widget.questions.length
-                ? Icons.navigate_next
-                : Icons.flag,
-          ),
-          label: Text(
-            _index + 1 < widget.questions.length
-                ? 'Question suivante'
-                : 'Terminer',
-          ),
+          icon: Icon(last ? Icons.flag : Icons.navigate_next),
+          label: Text(last ? 'Terminer' : 'Question suivante'),
         ),
       ],
     );
   }
 
-  bool get _isCorrect {
-    final answer = _q.type == QuizType.qcm || _q.type == QuizType.trueFalse
-        ? _selected ?? ''
-        : _freeAnswer;
-    return _q.isCorrect(answer);
+  void _restart() {
+    setState(() {
+      _index = 0;
+      _score = 0;
+      _resetQuestionState();
+    });
   }
 
   void _finish() {
-    final pct = ((_score / widget.questions.length) * 100).round();
+    final total = widget.questions.length;
+    final pct = ((_score / total) * 100).round();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Quiz terminé'),
         content: Text(
-          'Score : $_score/${widget.questions.length}\n\n'
-          '$pct% de réussite.',
+          'Score : $_score/$total\n\n$pct% de réussite.\n\n'
+          'Les XP ne sont attribués qu\'une fois par question réussie ; '
+          'vous pouvez recommencer pour vous entraîner.',
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _restart();
+            },
+            child: const Text('Recommencer'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Fermer'),

@@ -23,3 +23,9 @@ android/key.properties
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Livrables générés (APK, ZIP, rapports) : jamais versionnés
+dist/
+*.apk
+*.aab
+local.properties

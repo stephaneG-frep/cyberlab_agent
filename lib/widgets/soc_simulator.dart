@@ -122,17 +122,27 @@ class _SocSimulatorState extends State<SocSimulator> {
       _severity = null;
       _category = null;
       _submitted = false;
+      _xpGained = 0;
     });
   }
 
-  void _submit() {
+  static const xpPerAlert = 25;
+  int _xpGained = 0;
+
+  Future<void> _submit() async {
     final app = context.read<AppState>();
     final sevOk = _severity == _alert.correctSeverity;
     final catOk = _category == _alert.correctCategory;
-    if (sevOk && catOk) {
-      app.addXp(25, skill: 'Blueteam');
-    }
-    setState(() => _submitted = true);
+    final gained = await app.resolveSocAlert(
+      _alert.id,
+      sevOk && catOk,
+      xpPerAlert,
+    );
+    if (!mounted) return;
+    setState(() {
+      _xpGained = gained;
+      _submitted = true;
+    });
   }
 
   @override
@@ -149,7 +159,7 @@ class _SocSimulatorState extends State<SocSimulator> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Analysez l\'alerte fictive : classez sa gravité, catégorisez, puis proposez une action. L\'IA vous corrige.',
+          'Analysez l\'alerte fictive : classez sa gravité et catégorisez-la. Une correction rédigée à l\'avance s\'affiche ensuite (25 XP une fois par alerte réussie).',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
@@ -240,7 +250,7 @@ class _SocSimulatorState extends State<SocSimulator> {
                 ? _submit
                 : null,
             icon: const Icon(Icons.fact_check),
-            label: const Text('Analyser (l\'IA corrige)'),
+            label: const Text('Valider mon analyse'),
           ),
         const SizedBox(height: 16),
         Align(
@@ -272,7 +282,9 @@ class _SocSimulatorState extends State<SocSimulator> {
             ),
             title: Text(
               sevOk && catOk
-                  ? 'Excellente analyse ! (+25 XP)'
+                  ? (_xpGained > 0
+                        ? 'Excellente analyse ! (+$_xpGained XP)'
+                        : 'Excellente analyse ! (alerte déjà réussie, pas de nouveaux XP)')
                   : 'Les points à revoir',
             ),
             subtitle: Text(
@@ -289,7 +301,7 @@ class _SocSimulatorState extends State<SocSimulator> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Analyse du CyberCoach',
+                  'Correction (fiche pédagogique)',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),

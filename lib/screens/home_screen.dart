@@ -91,7 +91,8 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${user.progressToNext}% vers le niveau ${user.level + 1} (${user.xpForNextLevel} XP)',
+              '${user.progressToNext}% vers le niveau ${user.level + 1} '
+              '(${user.xp}/${user.xpForNextLevel} XP)',
             ),
           ],
         ),
@@ -161,7 +162,7 @@ class HomeScreen extends StatelessWidget {
         Expanded(
           child: StatTile(
             icon: Icons.local_fire_department,
-            value: '${user.streak}',
+            value: '${app.currentStreak}',
             label: 'Série',
           ),
         ),
@@ -173,10 +174,11 @@ class HomeScreen extends StatelessWidget {
             label: 'CTF',
           ),
         ),
+        const SizedBox(width: 8),
         Expanded(
           child: StatTile(
             icon: Icons.stars_outlined,
-            value: '${user.badgesEarned.length}',
+            value: '${app.earnedBadges.length}',
             label: 'Badges',
           ),
         ),

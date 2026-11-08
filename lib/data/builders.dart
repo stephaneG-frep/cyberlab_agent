@@ -12,8 +12,15 @@ ContentBlock note(String t) => ContentBlock(type: BlockType.note, text: t);
 ContentSection sec(String title, List<ContentBlock> blocks) =>
     ContentSection(title: title, blocks: blocks);
 
-QuizQuestion q(List<Object?> parts) {
-  // parts: id, question, type, correct, options[], explanation, [code], [xp]
+QuizQuestion q(
+  List<Object?> parts, {
+  String? hint,
+  List<String> accept = const [],
+  bool caseSensitive = false,
+}) {
+  // parts: id, question, type, options|correct, [correct index], explanation
+  // hint : indice pédagogique facultatif (sans la réponse)
+  // accept : variantes explicitement acceptées pour les réponses libres
   final type = _typeFor(parts[2] as String);
   final isQcm = type == QuizType.qcm;
   return QuizQuestion(
@@ -23,6 +30,9 @@ QuizQuestion q(List<Object?> parts) {
     options: isQcm ? (parts[3] as String).split('|') : null,
     correctAnswer: isQcm ? parts[4] as String : (parts[3] as String),
     explanation: parts.length > 5 && parts[5] != null ? parts[5] as String : '',
+    hint: hint,
+    acceptedAnswers: accept,
+    caseSensitive: caseSensitive,
   );
 }
 

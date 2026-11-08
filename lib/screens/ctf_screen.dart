@@ -137,22 +137,28 @@ class _ChallengeViewState extends State<ChallengeView> {
     super.dispose();
   }
 
-  void _check() {
+  bool _wrongAttempt = false;
+  int _xpGained = 0;
+
+  Future<void> _check() async {
+    final input = _controller.text;
+    if (input.trim().isEmpty) return;
     final app = context.read<AppState>();
-    final ok =
-        _controller.text.trim().toLowerCase() == c.answer.trim().toLowerCase();
-    setState(() {
-      _solved = ok;
-    });
-    if (ok) {
-      if (!app.user.solvedChallenges.contains(c.id)) {
-        app.solveChallenge(c.id, c.xp);
-      }
-      setState(() {
-        _revealed = true;
-        _hintLevel = c.hints.length;
-      });
+    final ok = c.isCorrect(input);
+    if (!ok) {
+      setState(() => _wrongAttempt = true);
+      await app.registerActivity();
+      return;
     }
+    final gained = await app.solveChallenge(c.id, c.xp);
+    if (!mounted) return;
+    setState(() {
+      _solved = true;
+      _wrongAttempt = false;
+      _xpGained = gained;
+      _revealed = true;
+      _hintLevel = c.hints.length;
+    });
   }
 
   @override
@@ -196,9 +202,17 @@ class _ChallengeViewState extends State<ChallengeView> {
           TextField(
             controller: _controller,
             enabled: !_revealed,
-            decoration: const InputDecoration(
+            onChanged: (_) => setState(() => _wrongAttempt = false),
+            onSubmitted: (_) => _check(),
+            decoration: InputDecoration(
               hintText: 'Votre commande/réponse...',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              helperText: c.caseSensitive
+                  ? 'Commande : majuscules et minuscules comptent.'
+                  : null,
+              errorText: _wrongAttempt
+                  ? 'Pas encore : relisez l\'objectif ou demandez un indice.'
+                  : null,
             ),
           ),
           const SizedBox(height: 12),
@@ -269,11 +283,20 @@ class _ChallengeViewState extends State<ChallengeView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              done ? 'Bravo, challenge réussi ! (+${c.xp} XP)' : 'Solution',
+              done
+                  ? (_xpGained > 0
+                        ? 'Bravo, challenge réussi ! (+$_xpGained XP)'
+                        : 'Bravo, challenge réussi ! (XP déjà obtenus)')
+                  : 'Solution',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 8),
             Text('Réponse : ${c.answer}'),
+            if (c.acceptedAnswers.isNotEmpty)
+              Text(
+                'Aussi accepté : ${c.acceptedAnswers.join(' · ')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             const SizedBox(height: 8),
             Text(c.explanation),
           ],

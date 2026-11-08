@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:provider/provider.dart';
-import '../data/badges.dart';
-import '../data/course_library.dart';
-import '../data/ctf_library.dart';
 import '../models/user_state.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
@@ -14,8 +11,8 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final user = app.user;
-    final defs = badgeDefs();
-    final earned = defs.where((d) => _badgeEarned(d, user)).toList();
+    final earned = app.earnedBadges;
+    final locked = app.lockedBadges;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
@@ -114,7 +111,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: StatTile(
                   icon: Icons.local_fire_department,
-                  value: '${user.streak}',
+                  value: '${app.currentStreak}',
                   label: 'Série',
                 ),
               ),
@@ -125,7 +122,8 @@ class ProfileScreen extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.timer_outlined),
               title: const Text('Temps d\'apprentissage'),
-              trailing: Text('${user.learningMinutes} min'),
+              subtitle: const Text('Temps passé dans l\'app au premier plan'),
+              trailing: Text('${app.learningMinutes} min'),
             ),
           ),
           const SectionTitle('Badges'),
@@ -153,8 +151,7 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  for (final d in defs.where((d) => !_badgeEarned(d, user)))
-                    _badgeRow(d.badge, locked: true),
+                  for (final d in locked) _badgeRow(d.badge, locked: true),
                 ],
               ),
             ),
@@ -225,30 +222,4 @@ Widget _badgeRow(Badge b, {bool locked = false}) {
       color: locked ? Colors.grey : Colors.amber,
     ),
   );
-}
-
-bool _badgeEarned(BadgeDef d, UserState user) {
-  switch (d.type) {
-    case 'courses':
-      final cat = d.category;
-      final count = CourseLibrary.all
-          .where((c) => c.category == cat)
-          .where((c) => user.completedCourses.contains(c.id))
-          .length;
-      return count >= d.threshold;
-    case 'ctf':
-      final solvedIds = user.solvedChallenges;
-      if (d.category == 'all') {
-        return solvedIds.length >= d.threshold;
-      }
-      final count = ctfChallenges()
-          .where((c) => c.category == d.category)
-          .where((c) => solvedIds.contains(c.id))
-          .length;
-      return count >= d.threshold;
-    case 'level':
-      return user.level >= d.threshold;
-    default:
-      return false;
-  }
 }

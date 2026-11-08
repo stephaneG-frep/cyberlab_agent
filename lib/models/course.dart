@@ -1,3 +1,5 @@
+import 'answer_matcher.dart';
+
 enum QuizType { qcm, trueFalse, free, practical }
 
 class QuizQuestion {
@@ -6,9 +8,20 @@ class QuizQuestion {
   final String question;
   final String? codeSnippet;
   final List<String>? options; // for qcm
-  final String? correctAnswer; // index (qcm) or 'true'/'false' or free text
+  final String? correctAnswer; // index (qcm) or 'Vrai'/'Faux' or free text
   final String explanation;
+
+  /// Valeur de référence unique des XP attribués ET affichés pour la question.
   final int xp;
+
+  /// Indice pédagogique facultatif (ne doit jamais contenir la réponse).
+  final String? hint;
+
+  /// Variantes explicitement acceptées pour les réponses libres/pratiques.
+  final List<String> acceptedAnswers;
+
+  /// Respect de la casse pour les réponses libres (ex. commandes).
+  final bool caseSensitive;
 
   QuizQuestion({
     required this.id,
@@ -19,6 +32,9 @@ class QuizQuestion {
     this.correctAnswer,
     required this.explanation,
     this.xp = 10,
+    this.hint,
+    this.acceptedAnswers = const [],
+    this.caseSensitive = false,
   });
 
   factory QuizQuestion.fromJson(Map<String, dynamic> j) {
@@ -34,26 +50,63 @@ class QuizQuestion {
       correctAnswer: j['correct'],
       explanation: j['explanation'] ?? '',
       xp: j['xp'] ?? 10,
+      hint: j['hint'],
+      acceptedAnswers: (j['accepted'] as List?)?.cast<String>() ?? const [],
+      caseSensitive: j['caseSensitive'] == true,
     );
   }
 
   bool isCorrect(String answer) {
-    if (correctAnswer == null) return false;
+    if (correctAnswer == null || correctAnswer!.trim().isEmpty) return false;
     switch (type) {
       case QuizType.qcm:
-        return answer == correct.toString();
+        return answer.trim() == correct.trim();
       case QuizType.trueFalse:
-        return answer.toLowerCase() == correct.toString().toLowerCase();
+        return answer.trim().toLowerCase() == correct.trim().toLowerCase();
       case QuizType.free:
-        return answer.trim().toLowerCase() ==
-            correct.toString().trim().toLowerCase();
       case QuizType.practical:
-        return answer.trim().toLowerCase() ==
-            correct.toString().trim().toLowerCase();
+        return AnswerMatcher.matches(
+          answer,
+          correct,
+          variants: acceptedAnswers,
+          caseSensitive: caseSensitive,
+        );
     }
   }
 
   String get correct => correctAnswer ?? '';
+
+  /// Réponse attendue sous forme lisible (texte de l'option pour un QCM).
+  String get displayCorrect {
+    if (type == QuizType.qcm && options != null) {
+      final idx = int.tryParse(correct.trim());
+      if (idx != null && idx >= 0 && idx < options!.length) {
+        return options![idx];
+      }
+    }
+    return correct;
+  }
+
+  /// Indice affiché : l'indice spécifique s'il existe, sinon une piste
+  /// générique qui ne révèle jamais la solution.
+  String get hintText {
+    final specific = hint?.trim();
+    if (specific != null && specific.isNotEmpty) return specific;
+    switch (type) {
+      case QuizType.qcm:
+        return 'Éliminez d\'abord les propositions manifestement hors sujet, '
+            'puis relisez la partie du cours qui traite de cette notion.';
+      case QuizType.trueFalse:
+        return 'Méfiez-vous des affirmations absolues (« toujours », « seuls », '
+            '« jamais ») : un seul contre-exemple suffit à les rendre fausses.';
+      case QuizType.free:
+      case QuizType.practical:
+        final words = correct.trim().split(RegExp(r'\s+')).length;
+        return 'La réponse attendue tient en $words mot${words > 1 ? 's' : ''}. '
+            'Repensez au vocabulaire ou à la commande présentés dans le cours'
+            '${caseSensitive ? ' (attention : majuscules et minuscules comptent)' : ''}.';
+    }
+  }
 }
 
 class QuizSection {
@@ -69,6 +122,9 @@ class ExerciseStep {
 
   ExerciseStep({required this.title, required this.instruction});
 }
+
+/// Identifiant stable d'un exercice : `<idCours>#<index>`.
+String exerciseId(String courseId, int index) => '$courseId#$index';
 
 class Course {
   final String id;

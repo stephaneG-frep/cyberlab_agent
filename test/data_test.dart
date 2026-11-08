@@ -24,7 +24,11 @@ void main() {
     test('la bibliothèque regroupe tous les cours sans doublon d\'id', () {
       final all = CourseLibrary.all;
       final ids = all.map((c) => c.id).toSet();
-      expect(ids.length, all.length, reason: 'ids de cours doivent être uniques');
+      expect(
+        ids.length,
+        all.length,
+        reason: 'ids de cours doivent être uniques',
+      );
       expect(all.length, greaterThanOrEqualTo(60));
     });
 

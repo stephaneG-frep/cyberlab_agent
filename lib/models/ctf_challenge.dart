@@ -1,3 +1,5 @@
+import 'answer_matcher.dart';
+
 class CtfChallenge {
   final String id;
   final String title;
@@ -12,6 +14,12 @@ class CtfChallenge {
   final String answer;
   final String explanation;
 
+  /// Variantes explicitement acceptées (aucune équivalence implicite).
+  final List<String> acceptedAnswers;
+
+  /// Vrai pour les commandes : sous Linux, la casse est significative.
+  final bool caseSensitive;
+
   CtfChallenge({
     required this.id,
     required this.title,
@@ -24,7 +32,16 @@ class CtfChallenge {
     required this.hints,
     required this.answer,
     required this.explanation,
+    this.acceptedAnswers = const [],
+    this.caseSensitive = false,
   });
+
+  bool isCorrect(String input) => AnswerMatcher.matches(
+    input,
+    answer,
+    variants: acceptedAnswers,
+    caseSensitive: caseSensitive,
+  );
 
   int get difficultyRank {
     switch (difficulty) {

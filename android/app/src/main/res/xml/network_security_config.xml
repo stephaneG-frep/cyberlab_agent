@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Politique réseau Android la plus restrictive possible : HTTP en clair
+  interdit, certificats système uniquement (aucun certificat utilisateur,
+  aucune désactivation de la validation TLS).
+
+  LIMITE TECHNIQUE (vérifiée) :
+  - network_security_config ne sait pas exprimer des plages d'adresses
+    (pas de CIDR, pas de joker sur les IP) : il est impossible d'y autoriser
+    « tout le réseau local » pour l'adresse Ollama choisie par l'utilisateur.
+  - Le client HTTP de Dart (dart:io, utilisé par package:http) ne consulte
+    pas cette politique dans la version de Flutter utilisée (le moteur
+    transmet une domainNetworkPolicy vide). Elle s'applique au code réseau
+    natif Android uniquement.
+  La restriction effective du HTTP clair est donc appliquée dans le code
+  (lib/services/ai_service.dart, buildEndpoint/isLocalHost) : HTTP accepté
+  seulement pour Ollama / API compatible vers localhost, 10.0.0.0/8,
+  172.16.0.0/12, 192.168.0.0/16, lien-local, IPv6 ULA ou *.local ; HTTPS
+  obligatoire pour OpenAI, Mistral, Anthropic et Gemini.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
