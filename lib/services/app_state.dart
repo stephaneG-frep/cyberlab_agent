@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../data/badges.dart';
+import '../data/course_library.dart';
 import '../models/coach_message.dart';
 import '../models/course.dart';
 import '../models/note.dart';
@@ -24,6 +25,19 @@ class QuizOutcome {
   });
 }
 
+/// Avancement du quiz d'un cours vers la condition de fin de cours.
+class CourseQuizStatus {
+  final int correct;
+  final int required;
+  final int total;
+  const CourseQuizStatus({
+    required this.correct,
+    required this.required,
+    required this.total,
+  });
+  bool get passed => correct >= required;
+}
+
 /// Profil de configuration d'un fournisseur IA (hors secret).
 class AiProfile {
   final String model;
@@ -40,10 +54,13 @@ class AppState extends ChangeNotifier {
     this.httpClient,
     DateTime Function()? clock,
     BadgeService? badges,
+    List<Course>? courses,
+    this.hostResolver,
   }) : storage = storage ?? StorageService(),
        secrets = secrets ?? SecureSecretStore(),
        _clock = clock ?? DateTime.now,
        badgeService = badges ?? BadgeService(),
+       _courses = {for (final c in courses ?? CourseLibrary.all) c.id: c},
        user = UserState() {
     ready = _init();
   }
@@ -69,7 +86,13 @@ Règles impératives :
 
   /// Client HTTP injectable (tests) ; null = client par défaut.
   final http.Client? httpClient;
+
+  /// Résolution DNS injectable (tests) ; null = résolution système.
+  final HostResolver? hostResolver;
   final DateTime Function() _clock;
+
+  /// Catalogue des cours (pour la condition de quiz de fin de cours).
+  final Map<String, Course> _courses;
 
   late final Future<void> ready;
 
@@ -94,35 +117,117 @@ Règles impératives :
 
   // ------------------------------------------------------------ Chargement
 
+  /// Chaque section (progression, notes, réglages, coach) est chargée
+  /// indépendamment : l'échec de l'une n'empêche pas le chargement des
+  /// autres. Si une section n'est relue que partiellement, sa valeur brute
+  /// est d'abord copiée sous `<clé>_corrupt_<horodatage>` : une écriture
+  /// ultérieure de cette section ne peut donc plus faire perdre de données.
   Future<void> _init() async {
-    try {
+    await _loadSection('Progression', StorageService.kUserState, () async {
       final u = await storage.loadUserState();
-      if (u.value != null) user = UserState.fromJson(u.value!);
       if (u.backupKey != null) {
         warnings.add(
           'Données de progression illisibles : une copie a été conservée '
           '(${u.backupKey}) et une progression vierge a été ouverte.',
         );
       }
+      if (u.value != null) user = UserState.fromJson(u.value!);
+    });
+
+    await _loadSection('Notes', StorageService.kNotes, () async {
       final n = await storage.loadNotes();
-      notes = n.value.map(Note.fromJson).toList();
       if (n.backupKey != null) {
         warnings.add('Notes illisibles : copie conservée (${n.backupKey}).');
       }
+      final parsed = <Note>[];
+      var invalid = 0;
+      for (final raw in n.value) {
+        try {
+          final note = Note.fromJson(Map<String, dynamic>.from(raw as Map));
+          parsed.add(
+            note.id.isEmpty
+                ? Note(
+                    id: 'n${DateTime.now().microsecondsSinceEpoch}_${parsed.length}',
+                    title: note.title,
+                    content: note.content,
+                    category: note.category,
+                    favorite: note.favorite,
+                    createdAt: note.createdAt,
+                    updatedAt: note.updatedAt,
+                  )
+                : note,
+          );
+        } catch (_) {
+          invalid++;
+        }
+      }
+      if (invalid > 0) {
+        final backup = await storage.backupRaw(StorageService.kNotes);
+        warnings.add(
+          '$invalid note(s) illisible(s) ignorée(s) ; les autres sont '
+          'chargées. Copie complète conservée ($backup).',
+        );
+      }
+      notes = parsed;
+    });
+
+    await _loadSection('Réglages', StorageService.kSettings, () async {
       final s = await storage.loadSettings();
+      if (s.backupKey != null) {
+        warnings.add('Réglages illisibles : copie conservée (${s.backupKey}).');
+      }
       settings = s.value;
-      final h = await storage.loadCoachHistory();
-      coachMessages = h.value
-          .map(CoachMessage.fromJson)
-          .whereType<CoachMessage>()
-          .toList();
       await _migrateLegacyAiSettings();
-      user.badgesEarned = badgeService.earnedIds(user);
-    } catch (e) {
-      warnings.add('Chargement incomplet des données locales : $e');
-    }
+    });
+
+    await _loadSection(
+      'Historique du coach',
+      StorageService.kCoachHistory,
+      () async {
+        final h = await storage.loadCoachHistory();
+        final parsed = <CoachMessage>[];
+        var invalid = 0;
+        for (final raw in h.value) {
+          final m = raw is Map
+              ? CoachMessage.fromJson(Map<String, dynamic>.from(raw))
+              : null;
+          m == null ? invalid++ : parsed.add(m);
+        }
+        if (invalid > 0) {
+          final backup = await storage.backupRaw(StorageService.kCoachHistory);
+          warnings.add(
+            '$invalid message(s) du coach illisible(s) ignoré(s). Copie '
+            'conservée ($backup).',
+          );
+        }
+        coachMessages = parsed;
+      },
+    );
+
+    user.badgesEarned = badgeService.earnedIds(user);
     loaded = true;
     notifyListeners();
+  }
+
+  Future<void> _loadSection(
+    String label,
+    String key,
+    Future<void> Function() load,
+  ) async {
+    try {
+      await load();
+    } catch (e) {
+      String? backup;
+      try {
+        backup = await storage.backupRaw(key);
+      } catch (_) {
+        backup = null;
+      }
+      warnings.add(
+        '$label : chargement incomplet ($e). '
+        '${backup != null ? 'Copie des données d\'origine conservée ($backup).' : 'Aucune donnée d\'origine à conserver.'}',
+      );
+    }
   }
 
   /// Migration des réglages IA v1 (champs plats + clé en clair) vers des
@@ -136,18 +241,25 @@ Règles impératives :
         s.containsKey('aiApiKey');
     if (!hasLegacy) return;
 
-    final legacyProvider =
-        (s['aiLegacyKeyProvider'] ?? s['aiProvider'] ?? AiProviders.ollama)
-            as String;
-    final provider = (s['aiProvider'] ?? AiProviders.ollama) as String;
-    final profiles = _profilesMap();
-    final existing = Map<String, dynamic>.from(
-      (profiles[provider] as Map?) ?? const {},
+    String? str(Object? v) => v is String && v.isNotEmpty ? v : null;
+    String validProvider(Object? v) {
+      final p = str(v);
+      return p != null && AiProviders.all.contains(p) ? p : AiProviders.ollama;
+    }
+
+    final provider = validProvider(s['aiProvider']);
+    final legacyProvider = validProvider(
+      s['aiLegacyKeyProvider'] ?? s['aiProvider'],
     );
+    final profiles = _profilesMap();
+    final rawExisting = profiles[provider];
+    final existing = rawExisting is Map
+        ? Map<String, dynamic>.from(rawExisting)
+        : <String, dynamic>{};
     if (s.containsKey('aiModel') || s.containsKey('aiBaseUrl')) {
       profiles[provider] = {
-        'model': existing['model'] ?? s['aiModel'] ?? '',
-        'baseUrl': existing['baseUrl'] ?? s['aiBaseUrl'] ?? '',
+        'model': str(existing['model']) ?? str(s['aiModel']) ?? '',
+        'baseUrl': str(existing['baseUrl']) ?? str(s['aiBaseUrl']) ?? '',
       };
     }
 
@@ -156,7 +268,9 @@ Règles impératives :
       ..remove('aiModel')
       ..remove('aiBaseUrl');
 
-    final legacyKey = (s['aiApiKey'] as String?)?.trim() ?? '';
+    final legacyKey = s['aiApiKey'] is String
+        ? (s['aiApiKey'] as String).trim()
+        : '';
     if (legacyKey.isEmpty) {
       next
         ..remove('aiApiKey')
@@ -179,8 +293,10 @@ Règles impératives :
         next['aiLegacyKeyProvider'] = legacyProvider;
         warnings.add(
           'La clé API n\'a pas pu être déplacée vers le stockage sécurisé. '
-          'Elle reste utilisable mais stockée comme avant ; une nouvelle '
-          'tentative aura lieu au prochain démarrage.',
+          'Elle reste utilisable mais stockée comme avant, en clair dans les '
+          'préférences : elle peut donc figurer dans la sauvegarde Android de '
+          'l\'appareil. Une nouvelle tentative aura lieu au prochain '
+          'démarrage ; vous pouvez aussi la supprimer dans Paramètres.',
         );
       }
     }
@@ -241,9 +357,31 @@ Règles impératives :
     return gained;
   }
 
-  /// Termine un cours : unique point d'attribution des XP du cours.
+  List<String> _quizIds(String courseId) =>
+      _courses[courseId]?.quiz.map((q) => q.id).toList() ?? const [];
+
+  /// Avancement du quiz du cours vers la condition de fin de cours.
+  CourseQuizStatus courseQuizStatus(String courseId) {
+    final ids = _quizIds(courseId);
+    return CourseQuizStatus(
+      correct: user.quizCorrectCount(courseId, ids),
+      required: UserState.requiredQuizCorrect(ids.length),
+      total: ids.length,
+    );
+  }
+
+  /// Termine un cours : unique point d'attribution des XP du cours. Exige
+  /// que le quiz du cours soit réussi (voir [UserState.courseQuizPassRatio]) ;
+  /// sinon retourne 0 sans terminer le cours.
   Future<int> completeCourse(String courseId, int xp, {String? skill}) =>
-      _reward(() => user.completeCourse(courseId, xp, skill: skill));
+      _reward(
+        () => user.completeCourse(
+          courseId,
+          xp,
+          skill: skill,
+          quizQuestionIds: _quizIds(courseId),
+        ),
+      );
 
   Future<int> completeExercise(
     String courseId,
@@ -265,6 +403,7 @@ Règles impératives :
     String answer, {
     String? skill,
   }) async {
+    await ready;
     final correct = q.isCorrect(answer);
     final already = user.isRewarded(RewardKeys.quiz(courseId, q.id));
     final gained = await _reward(
@@ -282,6 +421,16 @@ Règles impératives :
 
   Future<int> solveChallenge(String challengeId, int xp) =>
       _reward(() => user.solveChallenge(challengeId, xp));
+
+  /// Affiche la solution d'un challenge : il ne rapportera plus d'XP
+  /// (enregistré durablement, même après fermeture de l'écran).
+  Future<void> revealChallengeSolution(String challengeId) async {
+    await ready;
+    if (user.revealChallenge(challengeId)) await _persistUser();
+  }
+
+  bool isSolutionRevealed(String challengeId) =>
+      user.isSolutionRevealed(challengeId);
 
   bool isRewarded(String key) => user.isRewarded(key);
 
@@ -562,7 +711,11 @@ Règles impératives :
               ),
             )
             .toList();
-        final service = AiService(config, client: httpClient);
+        final service = AiService(
+          config,
+          client: httpClient,
+          resolver: hostResolver,
+        );
         try {
           final result = await service.chat(coachSystemPrompt, history);
           reply = result.isOk

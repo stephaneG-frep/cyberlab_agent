@@ -45,6 +45,61 @@ class AiProviders {
 
   /// Ollama n'utilise jamais de clé.
   static bool usesKey(String p) => p != ollama;
+
+  /// Hôte officiel d'un fournisseur distant (null sinon).
+  static String? officialHost(String p) {
+    final d = defaultBaseUrl(p);
+    return d == null ? null : Uri.parse(d).host;
+  }
+}
+
+/// Résolution DNS (injectable pour les tests).
+typedef HostResolver = Future<List<InternetAddress>> Function(String host);
+
+/// Avertissements réseau et confidentialité pour une configuration saisie
+/// (affichés dans Paramètres avant l'enregistrement). Ne bloque rien : les
+/// adresses réellement refusées le sont par [buildEndpoint].
+List<String> networkWarnings({
+  required String provider,
+  required String baseUrl,
+  required bool hasKey,
+}) {
+  final warnings = <String>[];
+  final url = baseUrl.trim();
+  if (url.isEmpty) return warnings;
+  final uri = Uri.tryParse(url);
+  if (uri == null || uri.host.isEmpty) return warnings;
+  final host = uri.host.toLowerCase();
+
+  final official = AiProviders.officialHost(provider);
+  if (official != null && host != official) {
+    warnings.add(
+      'Adresse non officielle : votre clé ${AiProviders.label(provider)} et '
+      'vos messages seront envoyés à « $host », et non à « $official ». '
+      'N\'utilisez cette adresse que si vous faites confiance à ce serveur.',
+    );
+  }
+  if (uri.scheme == 'http') {
+    if (hasKey && AiProviders.usesKey(provider)) {
+      warnings.add(
+        'HTTP non chiffré : la clé API sera transmise EN CLAIR sur le réseau '
+        'local (toute personne sur le même Wi-Fi peut l\'intercepter). '
+        'Préférez HTTPS ou un serveur sans clé.',
+      );
+    } else {
+      warnings.add(
+        'HTTP non chiffré : vos messages transitent en clair sur le réseau '
+        'local. À réserver à un réseau de confiance.',
+      );
+    }
+    if (host.endsWith('.local')) {
+      warnings.add(
+        'Les noms « .local » sont vérifiés au moment de l\'envoi : la requête '
+        'est refusée si le nom ne correspond pas à une adresse locale.',
+      );
+    }
+  }
+  return warnings;
 }
 
 class AiSettings {
@@ -119,7 +174,8 @@ class AiResult {
         'Adresse du serveur invalide. Vérifiez l\'URL dans Paramètres.',
       AiErrorKind.insecureUrl =>
         'Adresse refusée : HTTPS est obligatoire, sauf pour un serveur local '
-            '(localhost, réseau privé 10.x, 172.16–31.x, 192.168.x, *.local).',
+            '(localhost, réseau privé 10.x, 172.16–31.x, 192.168.x, 100.64–127.x, '
+            'ou nom *.local résolu vers une de ces adresses).',
       AiErrorKind.auth =>
         'Authentification refusée$code : vérifiez la clé API du fournisseur sélectionné.',
       AiErrorKind.quota =>
@@ -146,25 +202,33 @@ class AiResult {
   }
 }
 
-/// Vrai pour les hôtes locaux autorisés en HTTP clair :
-/// boucle locale, réseaux privés IPv4 (RFC 1918), lien-local, IPv6 ULA/lien
-/// local, `localhost` et noms mDNS `*.local`.
-bool isLocalHost(String host) {
-  final h = host.toLowerCase();
-  if (h == 'localhost' || h.endsWith('.local')) return true;
-  final addr = InternetAddress.tryParse(h);
-  if (addr == null) return false;
+/// Vrai pour une adresse locale : boucle locale, réseaux privés IPv4
+/// (RFC 1918), lien-local, 100.64.0.0/10 (CGNAT, utilisé par Tailscale),
+/// IPv6 ULA (fc00::/7) et lien-local.
+bool isLocalAddress(InternetAddress addr) {
   if (addr.isLoopback || addr.isLinkLocal) return true;
   final b = addr.rawAddress;
   if (addr.type == InternetAddressType.IPv4) {
     return b[0] == 10 ||
         (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
-        (b[0] == 192 && b[1] == 168);
+        (b[0] == 192 && b[1] == 168) ||
+        (b[0] == 100 && b[1] >= 64 && b[1] <= 127);
   }
   if (addr.type == InternetAddressType.IPv6) {
     return (b[0] & 0xFE) == 0xFC; // fc00::/7
   }
   return false;
+}
+
+/// Vrai pour les hôtes acceptés en HTTP clair : adresse locale littérale
+/// (voir [isLocalAddress]), `localhost`, ou nom mDNS `*.local`.
+/// Un nom `*.local` n'est qu'une candidature : avant l'envoi, [AiService]
+/// le résout et refuse la requête s'il ne pointe pas vers une adresse locale.
+bool isLocalHost(String host) {
+  final h = host.toLowerCase();
+  if (h == 'localhost' || h.endsWith('.local')) return true;
+  final addr = InternetAddress.tryParse(h);
+  return addr != null && isLocalAddress(addr);
 }
 
 /// Ajoute [suffix] à [base] sans doubler les slashs ni le chemin.
@@ -265,11 +329,14 @@ class AiService {
   AiService(
     this.settings, {
     http.Client? client,
+    HostResolver? resolver,
     this.timeout = const Duration(seconds: 90),
   }) : _client = client ?? http.Client(),
-       _ownsClient = client == null;
+       _ownsClient = client == null,
+       _resolver = resolver ?? InternetAddress.lookup;
 
   final AiSettings settings;
+  final HostResolver _resolver;
   final http.Client _client;
   final bool _ownsClient;
   final Duration timeout;
@@ -293,6 +360,8 @@ class AiService {
 
     final request = _buildRequest(systemPrompt, turns);
     try {
+      final dnsError = await _checkResolvedHost(endpoint.uri!);
+      if (dnsError != null) return AiResult.fail(dnsError);
       final resp = await _client
           .post(endpoint.uri!, headers: request.headers, body: request.body)
           .timeout(timeout);
@@ -320,6 +389,29 @@ class AiService {
     } catch (_) {
       return const AiResult.fail(AiErrorKind.unknown);
     }
+  }
+
+  /// En HTTP clair, un nom d'hôte (`*.local`) doit résoudre exclusivement
+  /// vers des adresses locales : sinon la requête partirait en clair hors du
+  /// réseau local (DNS piégé, nom mal configuré). Les adresses littérales et
+  /// `localhost` ont déjà été validées par [buildEndpoint].
+  Future<AiErrorKind?> _checkResolvedHost(Uri uri) async {
+    if (uri.scheme != 'http') return null;
+    final host = uri.host.toLowerCase();
+    if (host == 'localhost' || InternetAddress.tryParse(host) != null) {
+      return null;
+    }
+    final List<InternetAddress> addresses;
+    try {
+      addresses = await _resolver(host).timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      return AiErrorKind.unreachable;
+    } on SocketException {
+      return AiErrorKind.unreachable;
+    }
+    if (addresses.isEmpty) return AiErrorKind.unreachable;
+    if (!addresses.every(isLocalAddress)) return AiErrorKind.insecureUrl;
+    return null;
   }
 
   static AiErrorKind _kindForStatus(int code) {

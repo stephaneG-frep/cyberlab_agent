@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cyberlab_agent/data/course_library.dart';
 import 'package:cyberlab_agent/data/ctf_library.dart';
 import 'package:cyberlab_agent/models/course.dart';
+import 'package:cyberlab_agent/models/note.dart';
 import 'package:cyberlab_agent/models/user_state.dart';
 import 'package:cyberlab_agent/services/app_state.dart';
 import 'package:cyberlab_agent/services/badge_service.dart';
@@ -217,6 +218,9 @@ void main() {
       final app = await _app();
       final linux = CourseLibrary.byCategory('linux').take(5).toList();
       for (final c in linux) {
+        for (final q in c.quiz) {
+          await app.answerQuiz(c.id, q, q.correct);
+        }
         await app.completeCourse(c.id, c.xp);
       }
       final ids = app.earnedBadges.map((d) => d.badge.id).toSet();
@@ -284,5 +288,158 @@ void main() {
       expect(backups, hasLength(1));
       expect(prefs.getString(backups.first), '{pas du json');
     });
+  });
+
+  group('Fin de cours conditionnée au quiz', () {
+    final course = CourseLibrary.all.firstWhere((c) => c.quiz.length >= 3);
+
+    test('le cours ne se termine pas sans quiz réussi', () async {
+      final app = await _app();
+      expect(await app.completeCourse(course.id, course.xp), 0);
+      expect(app.user.completedCourses, isNot(contains(course.id)));
+      expect(app.courseQuizStatus(course.id).passed, isFalse);
+      expect(
+        await app.completeExercise(course.id, 0, 10),
+        0,
+        reason: 'exercices verrouillés tant que le cours n\'est pas terminé',
+      );
+    });
+
+    test('70 % des questions réussies (arrondi supérieur) suffisent', () async {
+      final app = await _app();
+      final status = app.courseQuizStatus(course.id);
+      expect(status.total, course.quiz.length);
+      expect(status.required, (course.quiz.length * 0.7).ceil());
+      // Une question de moins que le minimum : toujours refusé.
+      for (final q in course.quiz.take(status.required - 1)) {
+        await app.answerQuiz(course.id, q, q.correct);
+      }
+      expect(await app.completeCourse(course.id, course.xp), 0);
+      await app.answerQuiz(
+        course.id,
+        course.quiz[status.required - 1],
+        course.quiz[status.required - 1].correct,
+      );
+      expect(app.courseQuizStatus(course.id).passed, isTrue);
+      expect(await app.completeCourse(course.id, course.xp), course.xp);
+      expect(app.user.completedCourses, contains(course.id));
+    });
+
+    test('un cours terminé avant la règle reste terminé', () async {
+      SharedPreferences.setMockInitialValues({
+        'user_state': jsonEncode({
+          'schemaVersion': 2,
+          'xp': 100,
+          'completedCourses': [course.id],
+          'rewardedKeys': [RewardKeys.course(course.id)],
+        }),
+      });
+      final app = await _app();
+      expect(app.user.completedCourses, contains(course.id));
+      expect(await app.completeCourse(course.id, course.xp), 0);
+      expect(app.user.xp, 100);
+    });
+  });
+
+  group('CTF : solution consultée', () {
+    test('solution affichée puis réponse : résolu, sans XP', () async {
+      final app = await _app();
+      await app.revealChallengeSolution('ctf-1');
+      expect(app.isSolutionRevealed('ctf-1'), isTrue);
+      expect(await app.solveChallenge('ctf-1', 50), 0);
+      expect(app.user.solvedChallenges, contains('ctf-1'));
+      expect(app.user.xp, 0);
+    });
+
+    test('l\'affichage de la solution survit au redémarrage', () async {
+      var app = await _app();
+      await app.revealChallengeSolution('ctf-1');
+      await app.storage.flush();
+      app = await _app();
+      expect(app.isSolutionRevealed('ctf-1'), isTrue);
+      expect(await app.solveChallenge('ctf-1', 50), 0);
+    });
+
+    test('solution affichée après réussite : XP conservés', () async {
+      final app = await _app();
+      expect(await app.solveChallenge('ctf-1', 50), 50);
+      await app.revealChallengeSolution('ctf-1');
+      expect(app.isSolutionRevealed('ctf-1'), isFalse);
+      expect(app.user.xp, 50);
+    });
+  });
+
+  group('Chargement tolérant : aucune perte de données', () {
+    Future<List<String>> backups(String prefix) async {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getKeys().where((k) => k.startsWith(prefix)).toList();
+    }
+
+    test('une note invalide n\'efface pas les autres', () async {
+      final raw = jsonEncode([
+        {'id': 'n1', 'title': 'Bonne note', 'content': 'x'},
+        42,
+        {'id': 7, 'title': 'Id numérique', 'createdAt': 5},
+      ]);
+      SharedPreferences.setMockInitialValues({'notes': raw});
+      final app = await _app();
+      expect(app.notes.map((n) => n.title), ['Bonne note', 'Id numérique']);
+      expect(app.notes[1].id, '7');
+      expect(app.warnings.join(), contains('note(s) illisible(s)'));
+      final b = await backups('notes_corrupt_');
+      expect(b, hasLength(1));
+
+      // Une écriture ultérieure ne fait pas disparaître la copie d'origine.
+      await app.deleteNote('n1');
+      await app.storage.flush();
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(b.single), raw);
+    });
+
+    test(
+      'réglages de type inattendu : les autres sections se chargent',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'settings': jsonEncode({
+            'aiProvider': 5,
+            'aiModel': 'm',
+            'aiApiKey': 12,
+            'darkMode': false,
+          }),
+          'notes': jsonEncode([
+            {'id': 'n1', 'title': 'Conservée', 'content': ''},
+          ]),
+          'coach_history': jsonEncode([
+            {'role': 'user', 'text': 'Q'},
+            'pas un message',
+          ]),
+        });
+        final app = await _app();
+        expect(app.notes.single.title, 'Conservée');
+        expect(app.darkMode, isFalse);
+        expect(app.aiProvider, 'ollama');
+        expect(app.aiProfile('ollama').model, 'm');
+        expect(app.coachMessages.single.text, 'Q');
+        expect(await backups('coach_history_corrupt_'), hasLength(1));
+      },
+    );
+
+    test(
+      'section illisible : copie conservée avant toute réécriture',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'notes': '{pas une liste',
+          'user_state': jsonEncode({'xp': 40}),
+        });
+        final app = await _app();
+        expect(app.user.xp, 40, reason: 'la progression reste chargée');
+        final b = await backups('notes_corrupt_');
+        expect(b, hasLength(1));
+        await app.addNote(Note(id: 'n2', title: 'Nouvelle', content: ''));
+        await app.storage.flush();
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString(b.single), '{pas une liste');
+      },
+    );
   });
 }

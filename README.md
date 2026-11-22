@@ -10,7 +10,7 @@ Version : **1.1.0** (code 2).
 
 - **Apprendre** : 95 cours en 6 catégories (Fondamentaux 12, Linux 21, Réseau 26, Bash 12, Python 12, Web 12).
 - **Quiz** : QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
-- **CTF** : 12 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting). Indices progressifs, solution sur demande. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
+- **CTF** : 12 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
 - **Lab** : terminal Linux simulé, simulateur SOC (alertes fictives, correction rédigée à l'avance), filtres Wireshark, gestionnaire de labs en simulation.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
 - **Progression** : XP, niveaux, 11 badges, compétences, série quotidienne, temps d'apprentissage.
@@ -18,6 +18,8 @@ Version : **1.1.0** (code 2).
 
 ## Règles de progression
 
+- **Fin de cours** : il faut avoir réussi au moins **70 %** des questions du quiz du cours (arrondi supérieur, une question ratée peut être retentée). Le cours se termine alors et rapporte ses XP. Les exercices se débloquent ensuite. Les cours terminés avec une version précédente le restent.
+- **Solution CTF** : l'affichage de la solution est mémorisé durablement. Le challenge reste validable, sans XP.
 - Les **XP ne s'obtiennent qu'une fois** par cours, par exercice, par question de quiz réussie, par alerte SOC et par CTF. Tout reste rejouable pour s'entraîner, mais sans gain répété.
 - Une réponse de quiz d'abord fausse rapporte ses XP quand elle est réussie plus tard.
 - **Niveaux** : le niveau *n* commence à 250 × (n−1) × n XP, soit 0, 500, 1500, 3000, 5000… La barre affiche la progression entre le début du niveau actuel et le suivant.
@@ -44,17 +46,18 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 | API compatible OpenAI | — (à saisir) | facultative | HTTP accepté **seulement** vers un hôte local |
 
 - **Le modèle est obligatoire.** Saisissez l'identifiant exact indiqué par la documentation du fournisseur, ou par `ollama list`. L'application ne suppose aucun modèle par défaut.
-- **Hôte local** : `localhost`, 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, IPv6 `::1`, `fc00::/7`, `fe80::/10`, ou un nom `*.local`.
+- **Hôte local** : `localhost`, 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10 (CGNAT, Tailscale), IPv6 `::1`, `fc00::/7`, `fe80::/10`, ou un nom `*.local`. Un nom `*.local` est résolu avant chaque envoi : la requête est refusée si une des adresses obtenues n'est pas locale.
+- **Avertissements** : pendant la saisie, Paramètres signale une adresse qui n'est pas celle du fournisseur officiel (la clé y serait envoyée), une clé API transmise en clair en HTTP, ou des messages qui transitent en clair sur le réseau local.
 - Pour Ollama, le serveur doit écouter sur le réseau, par exemple `OLLAMA_HOST=0.0.0.0`, et le téléphone doit être sur le même réseau.
 - Vos **messages**, et les derniers échanges de la conversation (12 messages et 6000 caractères au maximum), sont transmis au fournisseur sélectionné. Le bouton « Nouvelle conversation » efface l'historique local.
 - Les erreurs sont affichées sous forme de messages compréhensibles : authentification, quota, modèle introuvable, serveur inaccessible, délai dépassé. Le contenu brut des réponses n'est jamais affiché.
 
 ## Stockage, secrets et sauvegardes
 
-- **Progression, notes, réglages non secrets et historique du coach** : `SharedPreferences`, sur l'appareil. Les écritures se font dans l'ordre et les erreurs s'affichent dans un bandeau. Si des données sont illisibles, elles sont **copiées** sous une clé `*_corrupt_<horodatage>` au lieu d'être écrasées.
+- **Progression, notes, réglages non secrets et historique du coach** : `SharedPreferences`, sur l'appareil. Les écritures se font dans l'ordre et les erreurs s'affichent dans un bandeau. Chaque section est chargée séparément, et les notes et messages du coach sont validés un par un. Si des données sont illisibles, même partiellement, la valeur d'origine est **copiée** sous une clé `*_corrupt_<horodatage>` avant toute réécriture. Les éléments lisibles restent chargés.
 - **Clés API** : `flutter_secure_storage`, un stockage chiffré adossé à l'Android Keystore. Les clés ne sont jamais journalisées et jamais incluses dans un rapport.
 - **Migration depuis la v1.0** : une ancienne clé stockée en clair est copiée dans le stockage sécurisé, puis relue. Elle n'est supprimée des préférences qu'après une relecture identique. En cas d'échec, elle reste utilisable, un avertissement s'affiche et une nouvelle tentative a lieu au démarrage suivant.
-- **Sauvegardes Android** : les règles sont des **listes blanches** (`res/xml/backup_rules.xml` et `res/xml/data_extraction_rules.xml`). Seul `FlutterSharedPreferences.xml` est sauvegardé et transféré entre appareils. Les fichiers du stockage sécurisé n'y figurent jamais, quel que soit leur nom. Après une restauration, il faut donc ressaisir les clés API.
+- **Sauvegardes Android** : les règles sont des **listes blanches** (`res/xml/backup_rules.xml` et `res/xml/data_extraction_rules.xml`). Seul `FlutterSharedPreferences.xml` est sauvegardé et transféré entre appareils. Il contient la progression, les notes, les réglages non secrets **et l'historique du coach** (questions et réponses), ce que l'application indique dans Paramètres et dans le coach. Les fichiers du stockage sécurisé n'y figurent jamais, quel que soit leur nom. Après une restauration, il faut donc ressaisir les clés API. Exception : si la migration d'une ancienne clé v1.0 échoue, cette clé reste en clair dans les préférences jusqu'à la migration suivante, et un avertissement le signale.
 
 ## Sécurité réseau
 
@@ -64,12 +67,24 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 
 ## Terminal simulé et Command Guard
 
-Le terminal imite Linux et n'exécute rien. Le **Command Guard** est une **règle pédagogique** du simulateur, pas une protection système. Il analyse les arguments de la commande réellement appelée, et non le texte brut :
+Le terminal imite Linux et n'exécute rien. Le **Command Guard** est une **règle pédagogique** du simulateur, pas une protection système, et sa liste de règles n'est pas exhaustive. Il analyse la commande réellement appelée, et non le texte brut.
 
-- il bloque `rm` lorsqu'il est à la fois récursif et forcé : `-rf`, `-fr`, `-r -f`, `-Rf`, `--recursive --force`… ;
-- il bloque `dd` avec `of=` ;
-- il analyse chaque segment séparé par `;`, `&&`, `||`, `|`, et ignore les préfixes `sudo`, `env`… ;
-- il ne bloque pas `echo "rm -rf /"`, `man rm` ni `grep "rm -rf" notes.txt`.
+Commandes refusées :
+
+- `rm` récursif et forcé, quelle que soit l'écriture : `-rf`, `-fr`, `-r -f`, `-Rf`, `--recursive --force`, abréviations GNU (`--rec --f`), `--interactive=never`, options placées après les fichiers ;
+- `dd` avec `of=`, et une redirection `>` vers un disque (`/dev/sda`, `/dev/nvme0n1`…) ;
+- formatage (`mkfs`, `mkfs.*`, `mke2fs`, `mkswap`, `wipefs`) et `shred` ;
+- `find -delete` sur un répertoire système (`/`, `~`, `/etc`, `/home`…), et `find -exec` dont la commande serait refusée ;
+- `chmod`, `chown` et `chgrp` récursifs sur un répertoire système ;
+- la bombe fork `:(){ :|:& };:`.
+
+Analyse :
+
+- chaque segment séparé par `;`, `&&`, `||`, `|` ou `&` ;
+- préfixes ignorés, avec leurs options : `sudo`, `doas`, `env`, `nohup`, `time`, `command`, `builtin`, `exec`, `nice`, `ionice`, `timeout`, `xargs`, `stdbuf`, `setsid`, `watch`, ainsi que les affectations `VAR=valeur` ;
+- nom de commande normalisé : `\rm`, `/bin/rm` et `"rm"` valent `rm` ;
+- code imbriqué : `bash -c "…"`, `sh -c`, `su -c`, `eval`, `$(…)` et `` `…` `` ; entre apostrophes, rien n'est analysé, car le shell n'exécute rien ;
+- il ne bloque pas `echo "rm -rf /"`, `man rm`, `grep "rm -rf" notes.txt`, `find . -name "*.tmp" -delete` ni `chmod -R 755 scripts`.
 
 ## Développement
 

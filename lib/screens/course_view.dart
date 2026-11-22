@@ -391,6 +391,25 @@ class _MarkCompleteButton extends StatelessWidget {
             ),
           );
         }
+        final quiz = app.courseQuizStatus(course.id);
+        if (!quiz.passed) {
+          return Card(
+            key: const ValueKey('course-quiz-required'),
+            color: Colors.orange.withValues(alpha: 0.12),
+            child: ListTile(
+              leading: const Icon(Icons.quiz, color: Colors.orange),
+              title: Text(
+                'Réussissez le quiz pour terminer le cours '
+                '(+${course.xp} XP)',
+              ),
+              subtitle: Text(
+                'Questions réussies : ${quiz.correct}/${quiz.total} — '
+                'il en faut au moins ${quiz.required}. Une question ratée '
+                'peut être retentée.',
+              ),
+            ),
+          );
+        }
         return FilledButton.icon(
           onPressed: () async {
             final messenger = ScaffoldMessenger.of(context);

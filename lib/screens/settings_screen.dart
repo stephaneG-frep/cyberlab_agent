@@ -66,23 +66,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _saving = true);
     final app = context.read<AppState>();
     final typedKey = _apiKey.text.trim();
-    final error = await app.saveAiConfig(
-      provider: _provider,
-      model: _model.text,
-      baseUrl: _baseUrl.text,
-      apiKey: _deleteKey ? '' : (typedKey.isEmpty ? null : typedKey),
-    );
-    if (!mounted) return;
-    final has = await app.hasApiKey(_provider);
+    String? error;
+    var has = _hasStoredKey;
+    try {
+      error = await app.saveAiConfig(
+        provider: _provider,
+        model: _model.text,
+        baseUrl: _baseUrl.text,
+        apiKey: _deleteKey ? '' : (typedKey.isEmpty ? null : typedKey),
+      );
+      has = await app.hasApiKey(_provider);
+    } catch (_) {
+      error = 'Enregistrement impossible. Réessayez.';
+    }
     if (!mounted) return;
     setState(() {
       _saving = false;
       _hasStoredKey = has;
-      _deleteKey = false;
-      if (error == null) _apiKey.clear();
+      if (error == null) {
+        _deleteKey = false;
+        _apiKey.clear();
+      }
     });
     _snack(error ?? 'Configuration du coach enregistrée');
   }
+
+  /// Avertissements réseau calculés sur la saisie en cours.
+  List<String> _currentNetworkWarnings() => networkWarnings(
+    provider: _provider,
+    baseUrl: _baseUrl.text,
+    hasKey: !_deleteKey && (_apiKey.text.trim().isNotEmpty || _hasStoredKey),
+  );
 
   void _confirmReset() {
     showDialog(
@@ -218,8 +232,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
+                    key: const ValueKey('ai-base-url'),
                     controller: _baseUrl,
                     keyboardType: TextInputType.url,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'URL du serveur',
                       helperText: _urlHelper(_provider),
@@ -231,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _apiKey,
+                      onChanged: (_) => setState(() {}),
                       obscureText: true,
                       enableSuggestions: false,
                       autocorrect: false,
@@ -270,6 +287,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ),
+                  for (final w in _currentNetworkWarnings())
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Container(
+                        key: const ValueKey('ai-network-warning'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.warning_amber,
+                              color: Colors.orange,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                w,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
@@ -280,6 +327,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SectionTitle('Confidentialité et sauvegardes'),
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Si la sauvegarde Android (Google) est activée sur l\'appareil, '
+                'elle inclut votre progression, vos notes, vos réglages non '
+                'secrets et l\'historique du CyberCoach (vos questions et ses '
+                'réponses). Les clés API n\'y figurent jamais : elles restent '
+                'chiffrées sur cet appareil et doivent être ressaisies après '
+                'une restauration. Pour retirer l\'historique du coach, '
+                'utilisez « Nouvelle conversation » dans le CyberCoach.',
+                style: TextStyle(fontSize: 12),
               ),
             ),
           ),
