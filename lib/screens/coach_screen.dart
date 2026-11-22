@@ -125,7 +125,8 @@ class _CoachScreenState extends State<CoachScreen> {
               _configured
                   ? 'Coach IA actif via $provider. Vos messages et les derniers '
                         'échanges de la conversation sont transmis à ce fournisseur. '
-                        'L\'historique est conservé sur l\'appareil.'
+                        'L\'historique est conservé sur l\'appareil et inclus '
+                        'dans sa sauvegarde Android si elle est activée.'
                   : 'Mode hors ligne : aucun modèle IA configuré, aucune réponse ne '
                         'sera générée. Cours, quiz, CTF et simulateurs restent '
                         'disponibles. Configuration : Paramètres → CyberCoach / IA.',

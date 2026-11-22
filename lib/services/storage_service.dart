@@ -67,10 +67,28 @@ class StorageService {
       return LoadResult(convert(jsonDecode(raw)));
     } catch (_) {
       // Ne jamais perdre silencieusement des données : copie de secours.
-      final backup = '${key}_corrupt_${DateTime.now().millisecondsSinceEpoch}';
-      await p.setString(backup, raw);
-      return LoadResult(empty, backupKey: backup);
+      return LoadResult(empty, backupKey: await backupRaw(key));
     }
+  }
+
+  /// Copie la valeur brute de [key] sous `<key>_corrupt_<horodatage>` et
+  /// retourne le nom de la copie (null si rien à copier). Utilisé quand des
+  /// données ne peuvent pas être relues entièrement : la valeur d'origine est
+  /// ainsi conservée même si la clé est réécrite ensuite.
+  Future<String?> backupRaw(String key) async {
+    await flush();
+    final p = await prefs;
+    final raw = p.getString(key);
+    if (raw == null) return null;
+    var backup = '${key}_corrupt_${DateTime.now().millisecondsSinceEpoch}';
+    var n = 1;
+    while (p.containsKey(backup)) {
+      backup = '${key}_corrupt_${DateTime.now().millisecondsSinceEpoch}_${n++}';
+    }
+    if (!await p.setString(backup, raw)) {
+      throw StorageException('Copie de secours refusée pour « $key ».');
+    }
+    return backup;
   }
 
   Future<LoadResult<Map<String, dynamic>?>> loadUserState() =>
@@ -79,11 +97,10 @@ class StorageService {
   Future<void> saveUserState(Map<String, dynamic> state) =>
       _write(kUserState, state);
 
-  Future<LoadResult<List<Map<String, dynamic>>>> loadNotes() => _read(
-    kNotes,
-    (d) => (d as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
-    <Map<String, dynamic>>[],
-  );
+  /// Liste brute : chaque élément est validé séparément par l'appelant, pour
+  /// qu'un élément invalide ne fasse pas disparaître les autres.
+  Future<LoadResult<List<Object?>>> loadNotes() =>
+      _read(kNotes, (d) => List<Object?>.from(d as List), <Object?>[]);
 
   Future<void> saveNotes(List<Map<String, dynamic>> notes) =>
       _write(kNotes, notes);
@@ -97,11 +114,8 @@ class StorageService {
   Future<void> saveSettings(Map<String, dynamic> settings) =>
       _write(kSettings, settings);
 
-  Future<LoadResult<List<Map<String, dynamic>>>> loadCoachHistory() => _read(
-    kCoachHistory,
-    (d) => (d as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
-    <Map<String, dynamic>>[],
-  );
+  Future<LoadResult<List<Object?>>> loadCoachHistory() =>
+      _read(kCoachHistory, (d) => List<Object?>.from(d as List), <Object?>[]);
 
   Future<void> saveCoachHistory(List<Map<String, dynamic>> messages) =>
       _write(kCoachHistory, messages);

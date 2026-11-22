@@ -172,10 +172,19 @@ void main() {
         'pc.local',
         '::1',
         'fd00::1',
+        '100.64.0.1',
+        '100.127.255.254',
       ]) {
         expect(isLocalHost(h), isTrue, reason: h);
       }
-      for (final h in ['8.8.8.8', '172.32.0.1', '192.169.0.1', 'example.com']) {
+      for (final h in [
+        '8.8.8.8',
+        '172.32.0.1',
+        '192.169.0.1',
+        '100.63.255.255',
+        '100.128.0.1',
+        'example.com',
+      ]) {
         expect(isLocalHost(h), isFalse, reason: h);
       }
     });
@@ -436,6 +445,134 @@ void main() {
       expect(app.coachBusy, isFalse);
       expect(app.coachMessages.last.role, CoachRole.notice);
       expect(app.coachMessages.last.text, contains('inaccessible'));
+    });
+  });
+
+  group('Noms *.local vérifiés à l\'envoi', () {
+    const settings = AiSettings(
+      provider: 'ollama',
+      model: 'm',
+      baseUrl: 'http://pc.local:11434',
+    );
+    HostResolver resolveTo(String ip) =>
+        (_) async => [InternetAddress(ip)];
+
+    test('résolu vers une adresse locale : requête envoyée', () async {
+      final r = _Recorder();
+      final res = await AiService(
+        settings,
+        client: r.client(
+          jsonEncode({
+            'message': {'content': 'ok'},
+          }),
+        ),
+        resolver: resolveTo('192.168.1.20'),
+      ).chat(_sys, _q);
+      expect(res.isOk, isTrue);
+      expect(r.calls, 1);
+    });
+
+    test(
+      'résolu vers une adresse publique : refusé, rien n\'est envoyé',
+      () async {
+        final r = _Recorder();
+        final res = await AiService(
+          settings,
+          client: r.client('{}'),
+          resolver: resolveTo('203.0.113.9'),
+        ).chat(_sys, _q);
+        expect(res.error, AiErrorKind.insecureUrl);
+        expect(r.calls, 0);
+      },
+    );
+
+    test(
+      'une seule adresse publique parmi plusieurs suffit à refuser',
+      () async {
+        final r = _Recorder();
+        final res = await AiService(
+          settings,
+          client: r.client('{}'),
+          resolver: (_) async => [
+            InternetAddress('192.168.1.20'),
+            InternetAddress('8.8.8.8'),
+          ],
+        ).chat(_sys, _q);
+        expect(res.error, AiErrorKind.insecureUrl);
+        expect(r.calls, 0);
+      },
+    );
+
+    test('nom introuvable : serveur inaccessible', () async {
+      final r = _Recorder();
+      final res = await AiService(
+        settings,
+        client: r.client('{}'),
+        resolver: (_) async => throw const SocketException('introuvable'),
+      ).chat(_sys, _q);
+      expect(res.error, AiErrorKind.unreachable);
+      expect(r.calls, 0);
+    });
+
+    test('HTTPS : aucune résolution préalable n\'est imposée', () async {
+      final r = _Recorder();
+      var resolved = false;
+      await AiService(
+        const AiSettings(provider: 'openai', model: 'm', apiKey: 'k'),
+        client: r.client(_openAiBody('ok')),
+        resolver: (_) async {
+          resolved = true;
+          return [];
+        },
+      ).chat(_sys, _q);
+      expect(resolved, isFalse);
+      expect(r.calls, 1);
+    });
+  });
+
+  group('Avertissements réseau', () {
+    test('adresse non officielle pour un fournisseur distant', () {
+      final w = networkWarnings(
+        provider: 'openai',
+        baseUrl: 'https://proxy.example.com/v1',
+        hasKey: true,
+      );
+      expect(w.single, contains('proxy.example.com'));
+      expect(
+        networkWarnings(
+          provider: 'openai',
+          baseUrl: 'https://api.openai.com/v1',
+          hasKey: true,
+        ),
+        isEmpty,
+      );
+      expect(
+        networkWarnings(provider: 'openai', baseUrl: '', hasKey: true),
+        isEmpty,
+        reason: 'adresse par défaut',
+      );
+    });
+
+    test('clé envoyée en clair en HTTP local', () {
+      final withKey = networkWarnings(
+        provider: 'compatible',
+        baseUrl: 'http://192.168.1.5:8000/v1',
+        hasKey: true,
+      );
+      expect(withKey.single, contains('EN CLAIR'));
+      final noKey = networkWarnings(
+        provider: 'compatible',
+        baseUrl: 'http://192.168.1.5:8000/v1',
+        hasKey: false,
+      );
+      expect(noKey.single, contains('messages transitent en clair'));
+      final ollama = networkWarnings(
+        provider: 'ollama',
+        baseUrl: 'http://pc.local:11434',
+        hasKey: true,
+      );
+      expect(ollama.join(), isNot(contains('clé API')));
+      expect(ollama.join(), contains('.local'));
     });
   });
 }

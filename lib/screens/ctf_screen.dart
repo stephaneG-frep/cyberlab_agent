@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/ctf_library.dart';
 import '../models/ctf_challenge.dart';
+import '../models/user_state.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
 
@@ -132,6 +133,51 @@ class _ChallengeViewState extends State<ChallengeView> {
   CtfChallenge get c => widget.challenge;
 
   @override
+  void initState() {
+    super.initState();
+    // Solution déjà consultée lors d'une visite précédente : elle reste
+    // affichée et le challenge ne rapporte plus d'XP.
+    if (context.read<AppState>().isSolutionRevealed(c.id)) {
+      _revealed = true;
+      _hintLevel = c.hints.length;
+    }
+  }
+
+  Future<void> _confirmReveal() async {
+    final app = context.read<AppState>();
+    final alreadyRewarded = app.isRewarded(RewardKeys.ctf(c.id));
+    final ok = alreadyRewarded
+        ? true
+        : await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Voir la solution ?'),
+              content: Text(
+                'Ce challenge ne rapportera plus ses ${c.xp} XP, même si vous '
+                'le validez plus tard. Vous pourrez toujours le rejouer.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Continuer à chercher'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Voir la solution'),
+                ),
+              ],
+            ),
+          );
+    if (ok != true || !mounted) return;
+    await app.revealChallengeSolution(c.id);
+    if (!mounted) return;
+    setState(() {
+      _hintLevel = c.hints.length;
+      _revealed = true;
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -201,7 +247,7 @@ class _ChallengeViewState extends State<ChallengeView> {
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
-            enabled: !_revealed,
+            enabled: !_solved,
             onChanged: (_) => setState(() => _wrongAttempt = false),
             onSubmitted: (_) => _check(),
             decoration: InputDecoration(
@@ -216,7 +262,7 @@ class _ChallengeViewState extends State<ChallengeView> {
             ),
           ),
           const SizedBox(height: 12),
-          if (!_revealed)
+          if (!_solved)
             FilledButton.icon(
               onPressed: _controller.text.trim().isEmpty ? null : _check,
               icon: const Icon(Icons.check),
@@ -260,10 +306,7 @@ class _ChallengeViewState extends State<ChallengeView> {
           )
         else if (_hintLevel < c.hints.length + 1)
           TextButton.icon(
-            onPressed: () => setState(() {
-              _hintLevel = c.hints.length;
-              _revealed = true;
-            }),
+            onPressed: _confirmReveal,
             icon: const Icon(Icons.visibility),
             label: const Text('Voir la solution'),
           ),
@@ -286,7 +329,11 @@ class _ChallengeViewState extends State<ChallengeView> {
               done
                   ? (_xpGained > 0
                         ? 'Bravo, challenge réussi ! (+$_xpGained XP)'
+                        : context.read<AppState>().isSolutionRevealed(c.id)
+                        ? 'Challenge validé (solution consultée : pas d\'XP)'
                         : 'Bravo, challenge réussi ! (XP déjà obtenus)')
+                  : context.read<AppState>().isSolutionRevealed(c.id)
+                  ? 'Solution (consultée : ce challenge ne rapporte plus d\'XP)'
                   : 'Solution',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),

@@ -28,13 +28,21 @@ class Note {
     'updatedAt': updatedAt.toIso8601String(),
   };
 
-  factory Note.fromJson(Map<String, dynamic> j) => Note(
-    id: j['id'] ?? '',
-    title: j['title'] ?? '',
-    content: j['content'] ?? '',
-    category: j['category'] ?? 'Général',
-    favorite: j['favorite'] ?? false,
-    createdAt: DateTime.tryParse(j['createdAt'] ?? '') ?? DateTime.now(),
-    updatedAt: DateTime.tryParse(j['updatedAt'] ?? '') ?? DateTime.now(),
-  );
+  /// Lecture tolérante : un champ de type inattendu est converti ou remplacé
+  /// par sa valeur par défaut au lieu de faire échouer tout le chargement.
+  factory Note.fromJson(Map<String, dynamic> j) {
+    String str(Object? v, String fallback) =>
+        v == null ? fallback : (v is String ? v : '$v');
+    DateTime date(Object? v) =>
+        (v is String ? DateTime.tryParse(v) : null) ?? DateTime.now();
+    return Note(
+      id: str(j['id'], ''),
+      title: str(j['title'], ''),
+      content: str(j['content'], ''),
+      category: str(j['category'], 'Général'),
+      favorite: j['favorite'] == true,
+      createdAt: date(j['createdAt']),
+      updatedAt: date(j['updatedAt']),
+    );
+  }
 }

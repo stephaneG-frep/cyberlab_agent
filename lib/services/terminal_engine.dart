@@ -10,57 +10,264 @@ class GuardVerdict {
 ///
 /// Le terminal n'exécute jamais rien sur l'appareil ; ce garde-fou sert à
 /// apprendre la prudence en refusant des commandes qui seraient
-/// destructrices sur un vrai système. Ce n'est pas une protection système.
+/// destructrices sur un vrai système. Ce n'est pas une protection système,
+/// et la liste des règles n'est pas exhaustive.
 ///
-/// Règles :
-/// - `rm` avec suppression récursive ET forcée, quelle que soit l'écriture :
-///   `-rf`, `-fr`, `-r -f`, `-Rf`, `--recursive --force`, `-r --force`… ;
-/// - `dd` avec un argument `of=` (écriture brute vers un fichier ou un
-///   périphérique) ;
-/// - chaque segment d'une chaîne (`;`, `&&`, `||`, `|`) est analysé, et les
-///   préfixes `sudo`, `env`, `nohup`, `time`, `command` sont ignorés.
-/// Seule la commande réellement invoquée compte : `echo "rm -rf /"` ou
-/// `man rm` ne sont pas bloqués.
+/// Commandes refusées :
+/// - `rm` récursif ET forcé, quelle que soit l'écriture : `-rf`, `-fr`,
+///   `-r -f`, `-Rf`, `--recursive --force`, abréviations GNU (`--rec`,
+///   `--f`), `--interactive=never`, options placées après les fichiers ;
+/// - `dd` avec `of=` ; redirection `>` vers un disque (`/dev/sda`…) ;
+/// - formatage (`mkfs`, `mkfs.*`, `mke2fs`, `mkswap`, `wipefs`) et `shred` ;
+/// - `find` avec `-delete` sur un chemin système (`/`, `~`, `/etc`…), et
+///   `find -exec` dont la commande serait elle-même refusée ;
+/// - `chmod`/`chown`/`chgrp` récursifs sur un chemin système ;
+/// - la « bombe fork » `:(){ :|:& };:`.
+///
+/// Analyse :
+/// - chaque segment (`;`, `&&`, `||`, `|`, `&`, retour à la ligne) ;
+/// - préfixes ignorés avec leurs options : `sudo`, `doas`, `env`, `nohup`,
+///   `time`, `command`, `builtin`, `exec`, `nice`, `ionice`, `timeout`,
+///   `xargs`, `stdbuf`, `setsid`, `watch`, et les affectations `VAR=valeur` ;
+/// - nom de commande normalisé (`\rm`, `/bin/rm`, `"rm"` → `rm`) ;
+/// - code imbriqué : `bash -c "…"`, `sh -c`, `su -c`, `eval`, `$(…)`,
+///   `` `…` `` (sauf entre apostrophes, où le shell ne l'exécute pas).
+/// Seule la commande réellement invoquée compte : `echo "rm -rf /"`,
+/// `man rm` ou `grep "rm -rf" notes.txt` ne sont pas bloqués.
 class CommandGuard {
   CommandGuard._();
 
-  static const _prefixes = {'sudo', 'env', 'nohup', 'time', 'command', 'exec'};
+  static const _maxDepth = 4;
 
-  static GuardVerdict check(String input) {
+  /// Préfixes : options qui prennent une valeur, et nombre d'arguments
+  /// positionnels à sauter avant la commande (ex. la durée de `timeout`).
+  static const Map<String, (Set<String>, int)> _prefixes = {
+    'sudo': ({'-u', '-g', '-C', '-h', '-p', '-U', '-r', '-t', '-D'}, 0),
+    'doas': ({'-u', '-C'}, 0),
+    'env': ({'-u', '-C'}, 0),
+    'nohup': ({}, 0),
+    'time': ({}, 0),
+    'command': ({}, 0),
+    'builtin': ({}, 0),
+    'exec': ({'-a'}, 0),
+    'nice': ({'-n'}, 0),
+    'ionice': ({'-c', '-n', '-p'}, 0),
+    'timeout': ({'-s', '-k'}, 1),
+    'xargs': ({'-n', '-I', '-L', '-P', '-d', '-E', '-s', '-a'}, 0),
+    'stdbuf': ({'-i', '-o', '-e'}, 0),
+    'setsid': ({}, 0),
+    'watch': ({'-n'}, 0),
+  };
+
+  static const _shells = {'sh', 'bash', 'zsh', 'dash', 'ksh', 'fish', 'ash'};
+
+  static const _formatters = {'mkfs', 'mke2fs', 'mkswap', 'wipefs'};
+
+  static const _sensitivePaths = {
+    '/',
+    '~',
+    r'$HOME',
+    r'${HOME}',
+    '/home',
+    '/root',
+    '/etc',
+    '/usr',
+    '/var',
+    '/boot',
+    '/bin',
+    '/sbin',
+    '/lib',
+    '/lib64',
+    '/opt',
+    '/dev',
+    '/sys',
+    '/proc',
+    '/srv',
+    '/mnt',
+    '/media',
+  };
+
+  static final _forkBomb = RegExp(r'(\S+)\s*\(\)\s*\{[^}]*\1\s*\|\s*\1');
+
+  static final _rawDisk = RegExp(
+    r'^/dev/(sd[a-z]|hd[a-z]|vd[a-z]|xvd[a-z]|nvme\d|mmcblk\d)',
+  );
+
+  static final _assignment = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*=');
+
+  static GuardVerdict check(String input) => _check(input, 0);
+
+  static GuardVerdict _check(String input, int depth) {
+    if (depth > _maxDepth) return const GuardVerdict.allow();
+    if (_forkBomb.hasMatch(input)) {
+      return const GuardVerdict.block('bombe fork (saturation du système)');
+    }
+    for (final inner in substitutions(input)) {
+      final v = _check(inner, depth + 1);
+      if (v.blocked) return v;
+    }
     for (final segment in splitSegments(input)) {
-      final words = segment.map(_unquote).toList();
-      var i = 0;
-      // Préfixes et leurs options (sudo -u root, env VAR=1…).
+      final v = _checkWords(segment.map(_unquote).toList(), depth);
+      if (v.blocked) return v;
+    }
+    return const GuardVerdict.allow();
+  }
+
+  static GuardVerdict _checkWords(List<String> words, int depth) {
+    final redirect = _rawDiskRedirect(words);
+    if (redirect != null) return redirect;
+
+    final i = _skipPrefixes(words);
+    if (i >= words.length) return const GuardVerdict.allow();
+    // Mot de commande issu d'une chaîne entre guillemets (`watch "rm -rf /"`).
+    if (words[i].trim().contains(RegExp(r'\s'))) {
+      return _check(words[i], depth + 1);
+    }
+    final cmd = commandName(words[i]);
+    final args = words.sublist(i + 1);
+
+    if (cmd == 'rm' && _isRecursiveForce(args)) {
+      return const GuardVerdict.block(
+        'suppression récursive forcée (rm -r + -f)',
+      );
+    }
+    if (cmd == 'dd' && args.any((a) => a.startsWith('of='))) {
+      return const GuardVerdict.block('écriture brute dd (of=)');
+    }
+    if (_formatters.contains(cmd) || cmd.startsWith('mkfs.')) {
+      return const GuardVerdict.block('formatage ou effacement d\'un disque');
+    }
+    if (cmd == 'shred') {
+      return const GuardVerdict.block('effacement irréversible (shred)');
+    }
+    if ((cmd == 'chmod' || cmd == 'chown' || cmd == 'chgrp') &&
+        _hasRecursiveFlag(args) &&
+        args.any(_isSensitivePath)) {
+      return GuardVerdict.block(
+        'modification récursive des droits d\'un répertoire système ($cmd -R)',
+      );
+    }
+    if (cmd == 'find') return _checkFind(args, depth);
+
+    // Code imbriqué exécuté par un autre programme.
+    if (_shells.contains(cmd) || cmd == 'su') {
+      final script = _dashCArgument(args);
+      if (script != null) return _check(script, depth + 1);
+    }
+    if (cmd == 'eval' && args.isNotEmpty) {
+      return _check(args.join(' '), depth + 1);
+    }
+    return const GuardVerdict.allow();
+  }
+
+  /// Index du mot de commande réel, après préfixes et affectations.
+  static int _skipPrefixes(List<String> words) {
+    var i = 0;
+    while (i < words.length) {
+      final w = words[i];
+      if (_assignment.hasMatch(w)) {
+        i++; // VAR=valeur commande
+        continue;
+      }
+      final prefix = _prefixes[commandName(w)];
+      if (prefix == null) break;
+      final (valued, positional) = prefix;
+      i++;
       while (i < words.length) {
-        final w = words[i];
-        if (_prefixes.contains(w)) {
+        final a = words[i];
+        if (a == '--') {
           i++;
-          while (i < words.length &&
-              (words[i].startsWith('-') || words[i].contains('='))) {
-            if (words[i] == '-u' || words[i] == '-g') i++;
-            i++;
-          }
+          break;
+        }
+        if (a.startsWith('-') && a.length > 1) {
+          i += valued.contains(a) ? 2 : 1;
           continue;
         }
-        if (w.contains('=') && !w.startsWith('-') && i == 0) {
-          i++; // VAR=valeur commande
+        if (_assignment.hasMatch(a)) {
+          i++; // env VAR=valeur, sudo VAR=valeur
           continue;
         }
         break;
       }
-      if (i >= words.length) continue;
-      final cmd = words[i].split('/').last;
-      final args = words.sublist(i + 1);
-      if (cmd == 'rm' && _isRecursiveForce(args)) {
-        return const GuardVerdict.block(
-          'suppression récursive forcée (rm -r + -f)',
-        );
-      }
-      if (cmd == 'dd' && args.any((a) => a.startsWith('of='))) {
-        return const GuardVerdict.block('écriture brute dd (of=)');
+      i += positional;
+    }
+    return i;
+  }
+
+  /// Nom de commande normalisé : sans antislash (`\rm`), ni chemin
+  /// (`/bin/rm`).
+  static String commandName(String word) =>
+      word.replaceAll(r'\', '').split('/').last;
+
+  static GuardVerdict? _rawDiskRedirect(List<String> words) {
+    for (var i = 0; i < words.length; i++) {
+      final w = words[i];
+      final m = RegExp(r'^\d*>>?(.*)$').firstMatch(w);
+      if (m == null) continue;
+      final target = m.group(1)!.isNotEmpty
+          ? m.group(1)!
+          : (i + 1 < words.length ? words[i + 1] : '');
+      if (_rawDisk.hasMatch(target)) {
+        return const GuardVerdict.block('écriture brute vers un disque (>)');
       }
     }
+    return null;
+  }
+
+  static GuardVerdict _checkFind(List<String> args, int depth) {
+    final starts = args
+        .takeWhile((a) => !a.startsWith('-') && a != '(' && a != '!')
+        .toList();
+    if (args.contains('-delete') && starts.any(_isSensitivePath)) {
+      return const GuardVerdict.block(
+        'suppression massive avec find -delete sur un répertoire système',
+      );
+    }
+    for (var i = 0; i < args.length; i++) {
+      if (!const {'-exec', '-execdir', '-ok', '-okdir'}.contains(args[i])) {
+        continue;
+      }
+      final sub = <String>[];
+      for (var j = i + 1; j < args.length; j++) {
+        final a = args[j];
+        if (a == ';' || a == r'\;' || a == r'\' || a == '+') break;
+        sub.add(a);
+      }
+      final v = _checkWords(sub, depth + 1);
+      if (v.blocked) return v;
+    }
     return const GuardVerdict.allow();
+  }
+
+  /// Argument de `-c` (`bash -c "…"`, `bash -lc "…"`, `su -c "…"`).
+  static String? _dashCArgument(List<String> args) {
+    for (var i = 0; i < args.length - 1; i++) {
+      final a = args[i];
+      if (a == '--command') return args[i + 1];
+      if (a.startsWith('-') && !a.startsWith('--') && a.contains('c')) {
+        return args[i + 1];
+      }
+    }
+    for (final a in args) {
+      if (a.startsWith('--command=')) return a.substring(10);
+    }
+    return null;
+  }
+
+  static bool _hasRecursiveFlag(List<String> args) => args.any(
+    (a) =>
+        a == '--recursive' ||
+        (a.startsWith('-') && !a.startsWith('--') && a.contains('R')),
+  );
+
+  static bool _isSensitivePath(String path) {
+    var p = path.trim();
+    if (p.endsWith('/*')) p = p.substring(0, p.length - 2);
+    while (p.length > 1 && p.endsWith('/')) {
+      p = p.substring(0, p.length - 1);
+    }
+    if (p.isEmpty) p = '/';
+    return _sensitivePaths.contains(p);
   }
 
   static bool _isRecursiveForce(List<String> args) {
@@ -68,8 +275,18 @@ class CommandGuard {
     for (final a in args) {
       if (a == '--') break; // la suite n'est que des noms de fichiers
       if (a.startsWith('--')) {
-        if (a == '--recursive') recursive = true;
-        if (a == '--force') force = true;
+        final eq = a.indexOf('=');
+        final name = eq < 0 ? a.substring(2) : a.substring(2, eq);
+        final value = eq < 0 ? null : a.substring(eq + 1);
+        if (name.isEmpty) continue;
+        // GNU accepte toute abréviation non ambiguë d'une option longue.
+        if ('recursive'.startsWith(name)) {
+          recursive = true;
+        } else if ('force'.startsWith(name)) {
+          force = true;
+        } else if ('interactive'.startsWith(name) && value == 'never') {
+          force = true;
+        }
       } else if (a.startsWith('-') && a.length > 1) {
         final flags = a.substring(1);
         if (flags.contains('r') || flags.contains('R')) recursive = true;
@@ -92,6 +309,47 @@ class CommandGuard {
       }
     }
     return b.toString();
+  }
+
+  /// Contenu des substitutions de commande `$(…)`, `<(…)`, `>(…)` et
+  /// `` `…` ``. Entre apostrophes, le shell n'exécute rien : ignoré.
+  static List<String> substitutions(String input) {
+    final found = <String>[];
+    var inSingle = false;
+    for (var i = 0; i < input.length; i++) {
+      final c = input[i];
+      if (c == r'\' && !inSingle) {
+        i++;
+        continue;
+      }
+      if (c == "'") {
+        inSingle = !inSingle;
+        continue;
+      }
+      if (inSingle) continue;
+      final next = i + 1 < input.length ? input[i + 1] : '';
+      if ((c == r'$' || c == '<' || c == '>') && next == '(') {
+        if (c == r'$' && i + 2 < input.length && input[i + 2] == '(') {
+          continue; // $(( … )) : arithmétique
+        }
+        var depth = 1, j = i + 2;
+        for (; j < input.length && depth > 0; j++) {
+          if (input[j] == '(') depth++;
+          if (input[j] == ')') depth--;
+        }
+        found.add(input.substring(i + 2, depth == 0 ? j - 1 : j));
+        i = j - 1;
+      } else if (c == '`') {
+        var j = i + 1;
+        while (j < input.length && input[j] != '`') {
+          if (input[j] == r'\') j++;
+          j++;
+        }
+        found.add(input.substring(i + 1, j.clamp(i + 1, input.length)));
+        i = j;
+      }
+    }
+    return found;
   }
 
   /// Découpe en segments (`;`, `&&`, `||`, `|`, `&`) hors guillemets, puis en

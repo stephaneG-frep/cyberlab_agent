@@ -100,6 +100,10 @@ class UserState {
   /// Récompenses déjà attribuées (voir [RewardKeys]).
   Set<String> rewardedKeys;
 
+  /// Challenges CTF dont la solution a été affichée : ils peuvent encore
+  /// être validés, mais ne rapportent plus d'XP.
+  Set<String> revealedChallenges;
+
   /// Dernier jour local d'activité (AAAA-MM-JJ) pour la série.
   String? lastActiveDay;
 
@@ -119,6 +123,7 @@ class UserState {
     this.learningSeconds = 0,
     this.selectedPath = 'fundamentals',
     Set<String>? rewardedKeys,
+    Set<String>? revealedChallenges,
     this.lastActiveDay,
     this.schemaVersion = currentSchema,
   }) : completedCourses = completedCourses ?? [],
@@ -127,7 +132,8 @@ class UserState {
        solvedChallenges = solvedChallenges ?? [],
        badgesEarned = badgesEarned ?? {},
        skills = skills ?? {},
-       rewardedKeys = rewardedKeys ?? {} {
+       rewardedKeys = rewardedKeys ?? {},
+       revealedChallenges = revealedChallenges ?? {} {
     level = LevelMath.levelFor(xp);
   }
 
@@ -174,9 +180,37 @@ class UserState {
     }
   }
 
+  /// Part minimale des questions du quiz à avoir réussies (au moins une
+  /// fois) pour terminer un cours.
+  static const courseQuizPassRatio = 0.7;
+
+  /// Nombre de questions à réussir parmi [total] pour terminer le cours.
+  static int requiredQuizCorrect(int total) =>
+      total == 0 ? 0 : (total * courseQuizPassRatio).ceil();
+
+  /// Nombre de questions de [questionIds] déjà réussies pour [courseId].
+  int quizCorrectCount(String courseId, Iterable<String> questionIds) =>
+      questionIds.where((q) => quizResults['$courseId/$q'] == 1).length;
+
+  /// Vrai si le quiz du cours est réussi (ou si le cours n'a pas de quiz).
+  bool courseQuizPassed(String courseId, List<String> questionIds) =>
+      quizCorrectCount(courseId, questionIds) >=
+      requiredQuizCorrect(questionIds.length);
+
   /// Termine un cours : seul point d'attribution de la récompense du cours.
-  int completeCourse(String courseId, int amount, {String? skill}) {
-    if (!completedCourses.contains(courseId)) completedCourses.add(courseId);
+  /// Le cours n'est terminé que si son quiz est réussi ([quizQuestionIds],
+  /// voir [courseQuizPassRatio]) ; sinon rien n'est modifié et 0 est
+  /// retourné. Un cours déjà terminé (y compris avant cette règle) le reste.
+  int completeCourse(
+    String courseId,
+    int amount, {
+    String? skill,
+    List<String> quizQuestionIds = const [],
+  }) {
+    if (!completedCourses.contains(courseId)) {
+      if (!courseQuizPassed(courseId, quizQuestionIds)) return 0;
+      completedCourses.add(courseId);
+    }
     return grant(RewardKeys.course(courseId), amount, skill: skill);
   }
 
@@ -216,12 +250,28 @@ class UserState {
     return grant(RewardKeys.soc(alertId), amount, skill: 'Blueteam');
   }
 
+  /// Valide un challenge. Si sa solution a été affichée avant la première
+  /// réussite, le challenge est marqué résolu mais ne rapporte aucun XP.
   int solveChallenge(String challengeId, int amount) {
     if (!solvedChallenges.contains(challengeId)) {
       solvedChallenges.add(challengeId);
     }
+    if (revealedChallenges.contains(challengeId)) return 0;
     return grant(RewardKeys.ctf(challengeId), amount, skill: 'CTF');
   }
+
+  /// Enregistre l'affichage de la solution. Sans effet si les XP du
+  /// challenge ont déjà été obtenus.
+  bool revealChallenge(String challengeId) {
+    if (isRewarded(RewardKeys.ctf(challengeId))) return false;
+    return revealedChallenges.add(challengeId);
+  }
+
+  /// Vrai si le challenge ne peut plus rapporter d'XP car sa solution a été
+  /// affichée avant qu'il soit réussi.
+  bool isSolutionRevealed(String challengeId) =>
+      revealedChallenges.contains(challengeId) &&
+      !isRewarded(RewardKeys.ctf(challengeId));
 
   // ------------------------------------------------------------------ Série
 
@@ -271,6 +321,7 @@ class UserState {
       'learningMinutes': learningMinutes,
       'selectedPath': selectedPath,
       'rewardedKeys': rewardedKeys.toList()..sort(),
+      'revealedChallenges': revealedChallenges.toList()..sort(),
     };
   }
 
@@ -296,8 +347,8 @@ class UserState {
     final rawSkills = j['skills'];
     if (rawSkills is Map) {
       rawSkills.forEach((k, v) {
-        if (v is Map<String, dynamic>) {
-          skills['$k'] = SkillProgress.fromJson(v);
+        if (v is Map) {
+          skills['$k'] = SkillProgress.fromJson(Map<String, dynamic>.from(v));
         }
       });
     }
@@ -332,6 +383,7 @@ class UserState {
           ? j['selectedPath'] as String
           : 'fundamentals',
       rewardedKeys: rewarded,
+      revealedChallenges: strList(j['revealedChallenges']).toSet(),
       lastActiveDay: lastDay is String ? lastDay : null,
       schemaVersion: currentSchema,
     );

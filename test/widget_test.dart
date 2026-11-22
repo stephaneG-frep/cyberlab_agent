@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cyberlab_agent/data/course_library.dart';
+import 'package:cyberlab_agent/data/ctf_library.dart';
 import 'package:cyberlab_agent/main.dart';
 import 'package:cyberlab_agent/models/coach_message.dart';
 import 'package:cyberlab_agent/models/course.dart';
@@ -14,6 +15,7 @@ import 'package:cyberlab_agent/screens/coach_screen.dart';
 import 'package:cyberlab_agent/screens/course_view.dart';
 import 'package:cyberlab_agent/screens/ctf_screen.dart';
 import 'package:cyberlab_agent/screens/notes_screen.dart';
+import 'package:cyberlab_agent/screens/settings_screen.dart';
 import 'package:cyberlab_agent/services/app_state.dart';
 import 'package:cyberlab_agent/services/secret_store.dart';
 import 'package:cyberlab_agent/widgets/quiz_runner.dart';
@@ -222,4 +224,87 @@ void main() {
       expect(app.coachMessages.last.text, 'Indice 1');
     },
   );
+
+  testWidgets('fin de cours : quiz requis avant de gagner les XP', (
+    tester,
+  ) async {
+    final app = _state();
+    await app.ready;
+    final course = CourseLibrary.all.first;
+    await tester.pumpWidget(_wrapped(CourseView(course: course), app: app));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exercices'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('course-quiz-required')),
+      300,
+    );
+    expect(find.textContaining('Réussissez le quiz'), findsOneWidget);
+    expect(find.textContaining('Terminer le cours'), findsNothing);
+  });
+
+  testWidgets('Paramètres : avertissement HTTP en clair', (tester) async {
+    await tester.pumpWidget(_wrapped(const SettingsScreen()));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ai-network-warning')), findsNothing);
+    await tester.enterText(
+      find.byKey(const ValueKey('ai-base-url')),
+      'http://192.168.1.20:11434',
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ai-network-warning')), findsOneWidget);
+    expect(find.textContaining('messages transitent en clair'), findsOneWidget);
+  });
+
+  testWidgets('CTF : la solution demande confirmation et reste consultée', (
+    tester,
+  ) async {
+    final app = _state();
+    await app.ready;
+    final challenge = ctfChallenges().first;
+    await tester.pumpWidget(
+      _wrapped(ChallengeView(challenge: challenge), app: app),
+    );
+    await tester.pumpAndSettle();
+    for (var i = 0; i < challenge.hints.length; i++) {
+      await tester.scrollUntilVisible(
+        find.text('Révéler un indice'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Révéler un indice'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Révéler un indice'));
+      await tester.pumpAndSettle();
+    }
+    await tester.scrollUntilVisible(
+      find.text('Voir la solution'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Voir la solution'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voir la solution'));
+    await tester.pumpAndSettle();
+    expect(find.text('Voir la solution ?'), findsOneWidget);
+    await tester.tap(find.text('Voir la solution').last);
+    await tester.pumpAndSettle();
+    expect(app.isSolutionRevealed(challenge.id), isTrue);
+
+    // Nouvelle visite (nouvel état d'écran) : la solution est toujours
+    // affichée, sans XP possible.
+    await tester.pumpWidget(
+      _wrapped(
+        ChallengeView(key: UniqueKey(), challenge: challenge),
+        app: app,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('Solution (consultée'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('Solution (consultée'), findsOneWidget);
+  });
 }

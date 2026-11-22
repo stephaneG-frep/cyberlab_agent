@@ -1,5 +1,36 @@
 # Changelog
 
+## [Non publié]
+
+Corrections issues de l'audit du 2026-11-22.
+
+### Fiabilité du chargement
+- Chaque section (progression, notes, réglages, historique du coach) est chargée **séparément** : l'échec de l'une ne vide plus les autres.
+- Les notes et les messages du coach sont validés **un par un**. Un élément invalide est ignoré, les autres sont chargés et la valeur d'origine complète est copiée sous `<clé>_corrupt_<horodatage>` avant toute réécriture.
+- `Note.fromJson` et la migration des réglages IA tolèrent les types inattendus (identifiant numérique, fournisseur non textuel…) au lieu de lever une exception.
+- Auparavant, une seule note malformée pouvait faire échouer tout le chargement, et la prochaine action écrasait alors notes et réglages sans copie de secours.
+
+### Command Guard (règle pédagogique du simulateur)
+- Nom de commande normalisé (`\rm`, `r\m`, `/bin/rm`, `"rm"`).
+- Nouveaux préfixes reconnus : `doas`, `nice`, `ionice`, `timeout`, `xargs`, `stdbuf`, `setsid`, `watch`, `builtin`, ainsi que leurs options.
+- Code imbriqué analysé : `bash -c`, `sh -c`, `su -c`, `eval`, `$(…)` et `` `…` `` (sauf entre apostrophes).
+- `rm` : abréviations GNU (`--rec`, `--f`), `--interactive=never`, options placées après les fichiers.
+- Nouvelles règles : formatage (`mkfs*`, `mke2fs`, `mkswap`, `wipefs`), `shred`, `find -delete` sur un répertoire système, `find -exec` dangereux, `chmod`/`chown`/`chgrp -R` sur un répertoire système, redirection `>` vers un disque, bombe fork.
+
+### Progression
+- **Fin de cours** : il faut avoir réussi au moins **70 %** des questions du quiz (arrondi supérieur) pour terminer un cours et gagner ses XP. Les exercices restent liés à la fin du cours. Les cours déjà terminés le restent.
+- **CTF** : l'affichage de la solution est enregistré durablement (`revealedChallenges`), après une confirmation. Le challenge peut encore être validé, mais il ne rapporte plus d'XP, même après avoir quitté puis rouvert l'écran.
+
+### Réseau et confidentialité
+- En HTTP, un nom `*.local` est **résolu avant l'envoi**. La requête est refusée si l'une des adresses obtenues n'est pas locale.
+- La plage `100.64.0.0/10` (CGNAT, utilisée par Tailscale) est acceptée comme réseau local.
+- Paramètres : avertissements affichés pendant la saisie pour une adresse non officielle d'un fournisseur distant, une clé API envoyée en clair en HTTP, ou des messages transmis en clair sur le réseau local.
+- Paramètres et coach : il est indiqué que notes, progression et historique du coach figurent dans la sauvegarde Android, et que les clés API n'y figurent jamais. L'avertissement d'échec de migration de l'ancienne clé le précise aussi.
+- Le bouton « Enregistrer » des Paramètres ne reste plus bloqué en cas d'erreur.
+
+### Tests
+- 171 tests au total (97 auparavant) : chargement tolérant, condition de quiz, solution CTF consultée, contournements du Command Guard, résolution des noms `*.local`, avertissements réseau, et écrans associés.
+
 ## [1.1.0] - 2026-11-08
 
 Version corrective issue de l'audit (`CORRECTIONS_AUDIT.md`). Contenu pédagogique et identité visuelle inchangés.
