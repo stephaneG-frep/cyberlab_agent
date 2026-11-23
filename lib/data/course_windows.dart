@@ -50,7 +50,7 @@ Course _basics() => Course(
         label: "Emplacements de démarrage automatique (persistance)",
       ),
       text(
-        "Les malwares cherchent à se relancer à chaque démarrage. Ces "
+        "Les malwares cherchent à se relancer à chaque démarrage ou ouverture de session. Ces "
         "emplacements sont les premiers à examiner lors d'une investigation "
         "(l'outil Autoruns de Sysinternals les liste tous).",
       ),
@@ -233,7 +233,7 @@ Course _events() => Course(
     sec("Lire les signaux", [
       list(
         "- Rafale de 4625 sur un compte : force brute ; sur des centaines de comptes : pulvérisation de mots de passe.\n"
-        "- 4720 puis 4732 (ajout aux administrateurs) en pleine nuit : compte dérobé.\n"
+        "- 4720 puis 4732 (ajout aux administrateurs) en pleine nuit : compte créé comme porte dérobée.\n"
         "- 7045 avec un service au nom étrange : persistance ou mouvement latéral.\n"
         "- 1102 : quelqu'un efface ses traces.",
       ),
@@ -700,7 +700,7 @@ Course _hardening() => Course(
       ),
       tip(
         "L'ANSSI publie des recommandations détaillées pour Active Directory, "
-        "et son outil ORADAD aide à évaluer la sécurité d'un annuaire.",
+        "et son outil ORADAD collecte les données d'un annuaire pour en évaluer la sécurité.",
       ),
     ]),
     sec("Préparer le pire", [

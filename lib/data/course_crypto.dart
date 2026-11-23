@@ -45,7 +45,7 @@ Course _encoding() => Course(
     sec("Les reconnaître", [
       list(
         "- **Base64** : lettres, chiffres, + et /, souvent terminé par = ou ==.\n"
-        "- **Hash** : longueur fixe en hexadécimal (64 caractères pour SHA-256), quel que soit le texte d'origine.\n"
+        "- **Hash** : longueur fixe quel que soit le texte d'origine, souvent en hexadécimal (64 caractères pour SHA-256) ; bcrypt commence par \$2.\n"
         "- **Chiffré** : octets d'apparence aléatoire, souvent présentés en Base64.",
       ),
       code(
@@ -323,7 +323,7 @@ Course _symmetric() => Course(
     sec("Les modes", [
       list(
         "- **ECB** : chaque bloc chiffré séparément ; des blocs identiques donnent des blocs chiffrés identiques. À proscrire.\n"
-        "- **CBC** : enchaîne les blocs, exige un vecteur d'initialisation (IV) imprévisible.\n"
+        "- **CBC** : enchaîne les blocs, exige un vecteur d'initialisation (IV) imprévisible ; ne détecte pas les modifications, à compléter par un HMAC.\n"
         "- **GCM** : chiffre ET authentifie (détecte toute modification). Recommandé.",
       ),
       warn(
@@ -502,7 +502,7 @@ Course _signatures() => Course(
       list(
         "- Mises à jour logicielles et paquets Linux signés.\n"
         "- Certificats TLS (signés par une autorité).\n"
-        "- Jetons JWT signés.\n"
+        "- Jetons JWT signés (RS256, ES256 ; HS256 est un HMAC).\n"
         "- Commits Git signés.",
       ),
     ]),
@@ -599,10 +599,12 @@ Course _pki() => Course(
     ]),
     sec("Expiration et révocation", [
       text(
-        "Les certificats ont une durée de vie courte (Let's Encrypt délivre "
-        "des certificats de 90 jours, renouvelés automatiquement par ACME). "
-        "Un certificat compromis avant son expiration est révoqué (CRL, "
-        "OCSP).",
+        "Les certificats ont une durée de vie courte, et de plus en plus : "
+        "ceux de Let's Encrypt durent 90 jours par défaut, puis 64 jours dès "
+        "février 2027 et 45 jours dès février 2028. Le renouvellement est "
+        "automatique (protocole ACME). Un certificat compromis avant son "
+        "expiration est révoqué, par des listes (CRL) ou par OCSP, que Let's "
+        "Encrypt a arrêté en 2025.",
       ),
       warn(
         "Un certificat auto-signé chiffre la connexion mais ne prouve "
@@ -648,7 +650,7 @@ Course _pki() => Course(
   exercises: [
     ex(
       "Inspecter un certificat",
-      "Dans votre navigateur, cliquez sur le cadenas d'un site HTTPS et "
+      "Dans votre navigateur, cliquez sur l'icône à gauche de l'adresse d'un site HTTPS et "
           "affichez son certificat : notez l'émetteur, la chaîne et la date "
           "d'expiration.",
     ),
@@ -672,9 +674,10 @@ Course _tls() => Course(
       code(
         "Client → Serveur : Client Hello (versions, algorithmes, part de clé, SNI)\n"
         "Serveur → Client : Server Hello (choix, part de clé)\n"
-        "                   + certificat et preuve de possession de la clé privée\n"
-        "Les deux         : calculent le même secret (Diffie-Hellman éphémère)\n"
-        "                   puis chiffrent tout avec une clé symétrique (AES-GCM)",
+        "                   puis, déjà chiffrés : certificat et preuve de\n"
+        "                   possession de la clé privée\n"
+        "Les deux         : le même secret (Diffie-Hellman éphémère) donne les\n"
+        "                   clés symétriques du reste de l'échange (AES-GCM)",
         label: "Résumé",
       ),
       tip(
@@ -687,7 +690,8 @@ Course _tls() => Course(
         "Avec Diffie-Hellman éphémère, chaque session a sa propre clé, "
         "oubliée ensuite. Même si la clé privée du serveur fuit plus tard, "
         "les échanges enregistrés auparavant restent indéchiffrables. TLS 1.3 "
-        "l'impose.",
+        "l'impose, sauf pour certaines reprises de session (clé prépartagée "
+        "seule, données 0-RTT).",
       ),
     ]),
     sec("Configuration faible", [

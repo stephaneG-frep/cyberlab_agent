@@ -198,7 +198,7 @@ Course _fs() => Course(
       'q1',
       'La racine du système de fichiers Linux est...',
       'qcm',
-      'C:/|/|\\|deux points',
+      'C:/|/|/root|/home',
       '1',
       'Tout part de la racine "/".',
     ]),
@@ -230,7 +230,7 @@ Course _fs() => Course(
   exercises: [
     ex(
       'Explorer l\'arborescence',
-      'Dans le terminal simulé, tapez "ls", puis "tree" pour visualiser la structure. Identifiez /etc, /var, /home.',
+      'Dans le terminal simulé, tapez "ls /" et identifiez /etc, /var et /home, puis "tree" pour visualiser votre dossier personnel.',
     ),
   ],
   xp: 100,
@@ -255,7 +255,7 @@ Course _navigation() => Course(
         'ls         # liste le contenu du dossier\n'
         'ls -l      # liste détaillée (permissions, taille, date)\n'
         'ls -a      # inclut les fichiers cachés\n'
-        'ls -h      # tailles lisibles (Ko, Mo)\n'
+        'ls -lh     # liste détaillée, tailles lisibles (Ko, Mo)\n'
         'cd dossier # entre dans un dossier\n'
         'cd ..      # remonte d\'un niveau\n'
         'cd ~       # va dans votre dossier personnel',
@@ -280,7 +280,7 @@ Course _navigation() => Course(
         label: 'Manipulation',
       ),
       warn(
-        'Attention à "rm -rf /" : cela détruit tout le système (r = récursif, f = forcer). C\'est l\'exemple type de commande destructrice. Ne l\'utilisez JAMAIS hors laboratoire.',
+        'Attention à "rm -rf /" : cela demande d\'effacer tout le système (r = récursif, f = forcer). Le rm de GNU refuse ce cas précis sans --no-preserve-root, mais pas "rm -rf /*". C\'est l\'exemple type de commande destructrice. Ne l\'utilisez JAMAIS hors laboratoire.',
       ),
     ]),
     sec('Les jokers (wildcards) avec * et ?', [
@@ -334,7 +334,7 @@ Course _navigation() => Course(
       'q3',
       'Un fichier dont le nom est "log?.txt" correspond à...',
       'qcm',
-      "le fichier log.txt, avec ou sans caractère entre les deux|un fichier avec 1 caractère entre log et txt (ex log1.txt)|tous les fichiers dont le nom commence par log (ex logAAA.txt)|uniquement un fichier dont le nom contient un point d'interrogation",
+      "le fichier log.txt, avec ou sans caractère entre les deux|un fichier avec 1 caractère entre log et .txt (ex log1.txt)|tous les fichiers dont le nom commence par log (ex logAAA.txt)|uniquement un fichier dont le nom contient un point d'interrogation",
       '1',
       'Le ? remplace exactement un caractère.',
     ]),
@@ -350,7 +350,7 @@ Course _navigation() => Course(
   exercises: [
     ex(
       'Pratique',
-      'Dans le terminal simulé, "touch log1.txt", "mkdir scripts", "ls -l", "cp log1.txt scripts/", "mv scripts/log1.txt notes.txt". Observez chaque sortie.',
+      'Dans le terminal simulé, "touch log1.txt", "mkdir essai", "ls -l", "cp log1.txt essai/", "mv essai/log1.txt essai/copie.txt", "ls essai". Observez chaque sortie.',
     ),
   ],
   xp: 100,

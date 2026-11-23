@@ -820,18 +820,18 @@ Course _owaspIntro() => Course(
         'Le Top 10 est un excellent point de départ pour comprendre où concentrer ses efforts.',
       ),
     ]),
-    sec('Grandes catégories de risques', [
+    sec('Le Top 10 2025', [
       list(
-        '- **Défaillance concernant le contrôle d\'accès**.\n'
-        '- **Failles cryptographiques**.\n'
-        '- **Injection (SQL, commandes)**.\n'
-        '- **Conception non sécurisée**.\n'
-        '- **Mauvaise configuration de sécurité**.\n'
-        '- **Composants vulnérables et obsolètes**.\n'
-        '- **Échec de l\'identification et de l\'authentification**.\n'
-        '- **Problèmes d\'intégrité des logiciels et des données**.\n'
-        '- **Défaillance de surveillance et de journalisation**.\n'
-        '- **Falsification de requête côté serveur (SSRF)**.',
+        '- **A01** : défaillance du contrôle d\'accès (inclut la SSRF).\n'
+        '- **A02** : mauvaise configuration de sécurité.\n'
+        '- **A03** : défaillances de la chaîne d\'approvisionnement logicielle.\n'
+        '- **A04** : défaillances cryptographiques.\n'
+        '- **A05** : injection (SQL, commandes, XSS).\n'
+        '- **A06** : conception non sécurisée.\n'
+        '- **A07** : défaillances d\'authentification.\n'
+        '- **A08** : défaillances d\'intégrité des logiciels ou des données.\n'
+        '- **A09** : défaillances de journalisation et d\'alerte.\n'
+        '- **A10** : mauvaise gestion des conditions exceptionnelles.',
       ),
       text(
         'Pour chaque risque, on apprend : explication, exemple, impact, démonstration en lab, exercice, correction, bonnes pratiques.',
@@ -980,7 +980,7 @@ Course _owaspAccess() => Course(
 
 Course _owaspInjection() => Course(
   id: 'web-owasp-injection',
-  title: 'Les injections (OWASP A03)',
+  title: 'Les injections (OWASP A05)',
   category: 'web_security',
   level: 'Niveau 6 - Sécurité Web',
   levelNumber: 6,
@@ -1001,7 +1001,7 @@ Course _owaspInjection() => Course(
         'Requête vulnérable :\n'
         'SELECT * FROM users WHERE user = \'\$user\' AND pass = \'\$pass\'\n'
         '\n'
-        'Entrée malveillante : user = \'admin\' --   \n'
+        'Entrée malveillante : admin\' -- \n'
         'Résultat : SELECT * FROM users WHERE user = \'admin\' --...\n'
         '           (le -- commente le reste → contourne le mot de passe)',
         label: 'SQLi',
@@ -1083,7 +1083,7 @@ Course _owaspInjection() => Course(
 
 // ---------------------------------------------------------------------------
 // Familles OWASP complémentaires. La numérotation citée est celle de
-// l'édition 2021 du Top 10 ; le classement est révisé régulièrement, mais les
+// l'édition 2025 du Top 10 ; le classement est révisé régulièrement, mais les
 // familles de failles restent.
 // ---------------------------------------------------------------------------
 
@@ -1098,15 +1098,15 @@ Course _xss() => Course(
     "Savoir ce qu'un attaquant peut faire avec une XSS",
     "Appliquer l'encodage en sortie et la CSP",
   ],
-  prerequisites: ["Les injections (OWASP A03)", "Les cookies"],
+  prerequisites: ["Les injections (OWASP A05)", "Les cookies"],
   sections: [
     sec("Le principe", [
       text(
         "Une XSS survient quand une application insère dans sa page une "
         "donnée fournie par l'utilisateur sans la neutraliser. Le navigateur "
         "de la victime exécute alors le script de l'attaquant, avec les "
-        "droits du site. Dans le Top 10 2021, la XSS fait partie de la "
-        "famille des injections.",
+        "droits du site. Dans le Top 10 2025, la XSS fait partie de la "
+        "famille des injections (A05).",
       ),
       code(
         "https://site.example/recherche?q=<script>alert(1)</script>",
@@ -1214,9 +1214,9 @@ Course _csrf() => Course(
     sec("Se protéger", [
       list(
         "- **Jeton anti-CSRF** : une valeur imprévisible liée à la session, exigée dans chaque formulaire ; la page piégée ne peut pas la connaître.\n"
-        "- **SameSite=Lax ou Strict** sur le cookie de session : il n'est plus envoyé par les requêtes provenant d'autres sites.\n"
+        "- **SameSite=Lax ou Strict** sur le cookie de session : un formulaire POST piégé sur un autre site part sans lui. Lax l'envoie encore quand on suit un lien (GET) ; Strict ne l'envoie jamais depuis un autre site.\n"
         "- Redemander le mot de passe pour les actions sensibles.\n"
-        "- Ne jamais modifier de données avec GET.",
+        "- Ne jamais modifier de données avec GET (SameSite=Lax ne le protège pas).",
       ),
     ]),
   ],
@@ -1243,7 +1243,7 @@ Course _csrf() => Course(
       'qcm',
       "SameSite|Path|Expires|Domain",
       '0',
-      "SameSite empêche l'envoi du cookie depuis d'autres sites.",
+      "Strict n'envoie jamais le cookie depuis un autre site ; Lax ne l'envoie qu'en suivant un lien (GET).",
     ]),
     q(const [
       'q3',
@@ -1283,8 +1283,9 @@ Course _ssrf() => Course(
         "Certaines fonctions récupèrent une URL fournie par l'utilisateur "
         "(aperçu de lien, import d'image, webhook). Si le serveur accepte "
         "n'importe quelle adresse, l'attaquant lui fait interroger des "
-        "ressources internes inaccessibles depuis Internet. SSRF est la "
-        "catégorie A10 du Top 10 2021.",
+        "ressources internes inaccessibles depuis Internet. Catégorie "
+        "A10 du Top 10 2021, la SSRF est rattachée en 2025 au contrôle "
+        "d'accès (A01).",
       ),
       code(
         "POST /apercu  url=http://192.168.56.10/admin\n"
@@ -1303,13 +1304,13 @@ Course _ssrf() => Course(
     sec("Se protéger", [
       list(
         "- **Liste d'autorisation** des domaines ou adresses joignables, plutôt qu'une liste de refus.\n"
-        "- Résoudre le nom puis refuser les adresses privées, de boucle locale et lien-local.\n"
+        "- Résoudre le nom puis refuser les adresses privées, de boucle locale et lien-local, puis se connecter à l'adresse vérifiée (sinon le nom peut changer entre-temps).\n"
         "- Désactiver les redirections automatiques ou revérifier chaque destination.\n"
         "- Filtrer le trafic sortant du serveur.\n"
         "- Utiliser la version protégée du service de métadonnées (IMDSv2 chez AWS).",
       ),
       tip(
-        "CyberLab applique lui-même ce principe pour le coach : en HTTP, un "
+        "CyberLab vérifie lui aussi l'adresse réelle pour le coach : en HTTP, un "
         "nom .local est résolu et refusé s'il pointe vers une adresse "
         "publique.",
       ),
@@ -1473,7 +1474,7 @@ Course _misconfig() => Course(
         "- En-têtes de sécurité absents.",
       ),
       text(
-        "La mauvaise configuration est la catégorie A05 du Top 10 2021 : "
+        "La mauvaise configuration est la catégorie A02 du Top 10 2025 : "
         "aucune ligne de code n'est fautive, mais le réglage expose tout.",
       ),
     ]),
@@ -1561,8 +1562,9 @@ Course _components() => Course(
       text(
         "Une application moderne embarque des centaines de bibliothèques. "
         "Une faille dans l'une d'elles devient une faille de l'application. "
-        "C'est la catégorie A06 du Top 10 2021 (composants vulnérables et "
-        "obsolètes).",
+        "C'est la catégorie A03 du Top 10 2025 (défaillances de la chaîne "
+        "d'approvisionnement logicielle), qui élargit l'ancienne A06 de 2021 "
+        "(composants vulnérables et obsolètes).",
       ),
       text(
         "Exemple marquant : Log4Shell (CVE-2021-44228, fin 2021), une faille "

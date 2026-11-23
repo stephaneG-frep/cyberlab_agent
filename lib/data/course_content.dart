@@ -61,9 +61,9 @@ Course _intro() => Course(
         'Aujourd\'hui, presque tout est connecté : banques, santé, transports, énergie. Une cyberattaque peut donc avoir des conséquences bien réelles sur le monde physique.',
       ),
       list(
-        '- Le coût mondial de la cybercriminalité se compte en milliers de milliards par an.\n'
+        '- Les cyberattaques coûtent chaque année des sommes considérables aux particuliers, aux entreprises et aux États.\n'
         '- Beaucoup d\'attaques réussies commencent par une erreur humaine (phishing).\n'
-        '- La majorité des incidents pourraient être évités par de bonnes pratiques de base.',
+        '- De bonnes pratiques de base (mises à jour, mots de passe uniques, 2FA, sauvegardes) évitent beaucoup d\'incidents.',
       ),
     ]),
     sec('Apprentissage, test autorisé, attaque illégale', [
@@ -80,7 +80,7 @@ Course _intro() => Course(
     sec('Erreurs fréquentes', [
       text(
         '- Croire que la cybersécurité = anti-virus (c\'est bien plus large).\n'
-        '- Penser que seuls les grandes entreprises sont ciblées.\n'
+        '- Penser que seules les grandes entreprises sont ciblées.\n'
         '- Oublier que le facteur humain est la plus grande faille.',
       ),
     ]),
@@ -99,7 +99,7 @@ Course _intro() => Course(
       'qcm',
       "Confidentialité, Intégrité, Disponibilité|Confidentialité, Rapidité, Compatibilité|Prévention, Détection, Restauration|Authentification, Chiffrement, Sauvegarde des données",
       '0',
-      'Les trois piliers (CIA) sont la Confidentialité, l\'Intégrité et la Disponibilité. SHA/AES/RSA sont des outils cryptographiques, pas des piliers.',
+      'Les trois piliers (CIA) sont la Confidentialité, l\'Intégrité et la Disponibilité. La sauvegarde ou le chiffrement sont des moyens au service de ces piliers.',
     ]),
     q(const [
       'q2',
@@ -172,7 +172,7 @@ Course _hackerEthique() => Course(
       list(
         '- **Chapeau blanc (white hat)** : éthique, avec autorisation, aide à sécuriser. Le hacker éthique.\n'
         '- **Chapeau gris (grey hat)** : peut explorer sans autorisation formelle mais sans intention nuisible. Zone grise légalement.\n'
-        '- **Chapeau noir (black hat)** : malveillant, agit sans autorisation, motive par le gain ou le vandalisme. Illégal.',
+        '- **Chapeau noir (black hat)** : malveillant, agit sans autorisation, motivé par le gain ou le vandalisme. Illégal.',
       ),
       warn(
         'Dans ce cours, nous visons exclusivement le chapeau blanc. Toute pratique offensive doit se faire dans un environnement autorisé.',
@@ -199,7 +199,7 @@ Course _hackerEthique() => Course(
         '- **Reporting** : communiquer les résultats de manière professionnelle.',
       ),
       warn(
-        'Même le "hacker les plus compétents" peuvent être poursuivis s\'ils agissent sans autorisation. La compétence ne justifie jamais l\'intrusion illégale.',
+        'Même les personnes les plus compétentes peuvent être poursuivis s\'ils agissent sans autorisation. La compétence ne justifie jamais l\'intrusion illégale.',
       ),
     ]),
   ],
@@ -296,12 +296,12 @@ Course _cybercriminalite() => Course(
         'Une cyberattaque peut causer des pertes financières, la fuite de données sensibles, l\'atteinte à la réputation, et dans certains cas des impacts physiques (hôpitaux, infrastructures).',
       ),
       warn(
-        'Comprendre la cybercriminalité ne veut pas dire la pratiquer. Écrire du code malveillant, même "pour voir", est illégal et dangereux.',
+        'Comprendre la cybercriminalité ne veut pas dire la pratiquer. En France, détenir ou diffuser sans motif légitime (recherche, sécurité) un programme conçu pour attaquer est puni par la loi (article 323-3-1 du Code pénal), et l\'utiliser contre autrui l\'est toujours.',
       ),
     ]),
     sec('Comment se protéger', [
       list(
-        '- Mots de passe forts et uniques, géré par un gestionnaire.\n'
+        '- Mots de passe forts et uniques, gérés par un gestionnaire.\n'
         '- Authentification à deux facteurs (2FA).\n'
         '- Mises à jour régulières.\n'
         '- Vigilance face au phishing.\n'
@@ -328,17 +328,17 @@ Course _cybercriminalite() => Course(
       'q2',
       'La principale motivation des cybercriminels est...',
       'qcm',
-      'l\'argent|le sport|l\'art|la science',
+      'l\'argent|la curiosité|la vengeance|la célébrité',
       '0',
       'L\'argent motive la grande majorité des cyberattaques.',
     ]),
     q(const [
       'q3',
-      'Vrai ou faux : écrire un virus "juste pour tester" est sans conséquence.',
+      'Vrai ou faux : diffuser un virus "juste pour tester" est sans conséquence.',
       'tf',
       'Faux',
       null,
-      'Créer et diffuser du code malveillant est illégal, même si c\'est "pour tester".',
+      'Diffuser du code malveillant est illégal, même "pour tester" : il échappe vite à tout contrôle. La recherche se fait dans un labo isolé, avec un motif légitime.',
     ]),
     q(const [
       'q4',

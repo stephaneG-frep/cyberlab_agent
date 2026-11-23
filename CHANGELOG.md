@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.1] - 2026-11-23
+
+### Corrections du contenu des cours
+Relecture des 48 cours qui ne l'avaient pas été en 1.7.0.
+
+- OWASP : les cours web suivent le Top 10 **2025** (la SSRF est rattachée au contrôle d'accès, les composants vulnérables à la chaîne d'approvisionnement).
+- Pare-feu : l'exemple iptables posait la politique DROP en premier, ce qui coupe une session SSH distante.
+- CSRF : `SameSite=Lax` envoie encore le cookie quand on suit un lien ; le cours disait le contraire.
+- SSRF : se connecter à l'adresse vérifiée, sinon le nom peut changer entre-temps.
+- Droit : les affirmations trop larges sur le scan de ports et l'écriture de code malveillant sont nuancées (articles 323-1, 323-3-1 et 323-7 du Code pénal).
+- Certificats : durées de Let's Encrypt (64 puis 45 jours) et arrêt d'OCSP ; TLS 1.3 : le certificat est déjà chiffré, exceptions à la confidentialité persistante.
+- Exercices Linux : l'un écrasait `notes.txt` et échouait sur `mkdir scripts` ; l'autre demandait de trouver `/etc` avec un `tree` qui ne le montre pas.
+- Balisage réseau : la question avait deux réponses défendables ; elle est reformulée.
+- Injection SQL : l'entrée malveillante de l'exemple ne produisait pas la requête affichée.
+- Explication citant des options supprimées en 1.6.1, affirmations sans source, formulations inexactes et coquilles.
+
 ## [1.7.0] - 2026-11-23
 
 ### Quiz

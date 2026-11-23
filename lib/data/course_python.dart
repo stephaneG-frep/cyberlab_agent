@@ -1188,7 +1188,7 @@ Course _pyAnalyzer() => Course(
       'qcm',
       "collections.Counter|itertools.permutations|collections.namedtuple|functools.partial",
       '0',
-      'Counter à compter les occurrences d\'éléments.',
+      'Counter sert à compter les occurrences d\'éléments.',
     ]),
     q(const [
       'q2',

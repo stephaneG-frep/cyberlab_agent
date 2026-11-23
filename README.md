@@ -4,7 +4,7 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.7.0** (code 9).
+Version : **1.7.1** (code 10).
 
 ## Fonctionnalités
 

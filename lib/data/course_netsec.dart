@@ -247,15 +247,19 @@ Course _firewall() => Course(
       text(
         "Un pare-feu à état mémorise les connexions établies. On autorise "
         "l'ouverture d'une connexion sortante, et les réponses reviennent "
-        "automatiquement, sans ouvrir de port entrant. C'est le cas de tous "
-        "les pare-feu modernes.",
+        "automatiquement, sans ouvrir de port entrant. C'est le cas de la "
+        "plupart des pare-feu actuels.",
       ),
       code(
-        "iptables -P INPUT DROP\n"
         "iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT\n"
         "iptables -A INPUT -i lo -j ACCEPT\n"
-        "iptables -A INPUT -p tcp --dport 22 -s 192.168.1.0/24 -j ACCEPT",
+        "iptables -A INPUT -p tcp --dport 22 -s 192.168.1.0/24 -j ACCEPT\n"
+        "iptables -P INPUT DROP",
         label: "iptables",
+      ),
+      warn(
+        "La politique DROP vient en dernier : appliquée en premier à "
+        "distance, elle couperait votre propre session SSH.",
       ),
     ]),
     sec("Ordre et journalisation", [
@@ -706,8 +710,9 @@ Course _scan() => Course(
   sections: [
     sec("Le cadre d'abord", [
       warn(
-        "Scanner un système sans autorisation écrite de son propriétaire est "
-        "illégal (en France, article 323-1 du Code pénal). On scanne son "
+        "Scanner un système sans autorisation expose à des poursuites : en "
+        "France, le Code pénal punit l'accès frauduleux à un système "
+        "(article 323-1) et sa tentative (article 323-7). On scanne son "
         "propre matériel, son lab, ou dans le cadre d'une mission signée qui "
         "précise le périmètre.",
       ),
@@ -765,11 +770,11 @@ Course _scan() => Course(
     ]),
     q(const [
       'q3',
-      "Vrai ou faux : scanner une adresse IP publique au hasard est légal tant qu'on n'exploite rien.",
+      "Vrai ou faux : scanner une adresse IP publique au hasard est sans risque juridique tant qu'on n'exploite rien.",
       'tf',
       'Faux',
       null,
-      "Sans autorisation, même un scan peut constituer une infraction.",
+      "Selon les circonstances, un scan non autorisé peut être vu comme une tentative d'accès frauduleux, et il enfreint souvent le contrat de votre fournisseur.",
     ]),
   ],
   exercises: [
@@ -841,11 +846,11 @@ Course _traffic() => Course(
   quiz: [
     q(const [
       'q1',
-      "Des connexions vers la même adresse exactement toutes les 60 secondes évoquent...",
+      "Un poste contacte une adresse inconnue toutes les 60 secondes, jour et nuit. À vérifier en priorité :",
       'qcm',
-      "Un balisage de malware|Une mise à jour normale|Un scan de ports|Une panne",
+      "Un balisage de malware|Un scan de ports|Une panne du réseau|Une attaque ARP",
       '0',
-      "La régularité mécanique est typique d'un malware qui contacte son serveur.",
+      "Cette régularité est typique d'un malware qui contacte son serveur. Des logiciels légitimes (supervision, synchronisation) font de même : on vérifie la destination avant de conclure.",
     ]),
     q(const [
       'q2',
