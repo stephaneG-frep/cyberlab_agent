@@ -97,7 +97,11 @@ class _SocSimulatorState extends State<SocSimulator> {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
-        LinearProgressIndicator(value: solved / total, minHeight: 6),
+        LinearProgressIndicator(
+          semanticsLabel: 'Alertes réussies : $solved sur $total',
+          value: solved / total,
+          minHeight: 6,
+        ),
         const SizedBox(height: 16),
         Card(
           color: Colors.red.withValues(alpha: 0.12),

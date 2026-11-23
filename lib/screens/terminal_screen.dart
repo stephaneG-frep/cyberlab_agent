@@ -133,8 +133,12 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 Icon(Icons.science, color: Colors.amber, size: 16),
                 SizedBox(width: 6),
                 Expanded(
+                  // Une seule ligne : la règle du Command Guard est rappelée
+                  // dans le message d'accueil du terminal.
                   child: Text(
-                    'TERMINAL SIMULÉ — rien n\'est exécuté. Le Command Guard est une règle pédagogique, pas une protection système.',
+                    'TERMINAL SIMULÉ : rien n\'est exécuté sur l\'appareil',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -156,7 +160,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     TermLineType.banner => Colors.grey,
                     TermLineType.output => Colors.greenAccent,
                   };
-                  return SelectableText(
+                  final text = SelectableText(
                     line.text,
                     style: TextStyle(
                       fontFamily: 'monospace',
@@ -165,6 +169,13 @@ class _TerminalScreenState extends State<TerminalScreen> {
                       height: 1.4,
                     ),
                   );
+                  // Le résultat de la dernière commande est annoncé par le
+                  // lecteur d'écran.
+                  final isResult =
+                      i == _lines.length - 1 && line.type != TermLineType.input;
+                  return isResult
+                      ? Semantics(liveRegion: true, child: text)
+                      : text;
                 },
               ),
             ),
@@ -209,7 +220,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     ),
                     decoration: const InputDecoration(
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      // Zone tactile d'au moins 48 dp.
+                      constraints: BoxConstraints(minHeight: 48),
+                      contentPadding: EdgeInsets.symmetric(vertical: 14),
                       hintText: 'commande (ex. help, ls)',
                       hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
@@ -225,7 +238,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 ),
                 IconButton(
                   tooltip: 'Commande précédente',
-                  visualDensity: VisualDensity.compact,
                   onPressed: _recall,
                   icon: const Icon(Icons.history, color: Colors.grey),
                 ),

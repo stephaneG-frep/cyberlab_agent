@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.4.0] - 2026-11-23
+
+### Prérequis des cours
+- Les prérequis rédigés en texte libre sont reliés à de vrais cours (`lib/data/course_prerequisites.dart`). Les tests vérifient que chaque identifiant existe et qu'il n'y a aucun cycle (un cycle pipes ↔ grep du contenu a été résolu : pipes d'abord).
+- Écran du cours : liste des cours conseillés, avec leur état et un accès direct, et un avertissement si certains ne sont pas terminés. Rien n'est verrouillé.
+- Liste « Apprendre » : cadenas et mention « n prérequis conseillés à faire ».
+- « Continuer ma formation » propose d'abord un cours dont les prérequis sont faits.
+
+### Rappel quotidien
+- Paramètres → Rappel quotidien : notification locale à l'heure choisie, désactivée par défaut, sautée les jours où l'on a déjà pratiqué.
+- Autorisation demandée seulement à l'activation ; horaire approximatif (aucune alarme exacte) ; reprogrammé après redémarrage.
+- Nouvelles dépendances : `flutter_local_notifications` 22.3.3, `timezone`, `flutter_timezone`. Desugaring activé dans Gradle. Nouvelles permissions : `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE`.
+
+### Accessibilité
+- Libellés TalkBack : boutons-icônes sans libellé (menu, recherche, favori, enregistrer, changer de parcours), tuiles de statistiques lues d'un bloc, barres de compétences en caractères █░ remplacées par « niveau n sur 100 », titres de section marqués comme titres, icônes d'état (terminé, à faire).
+- Barres de progression avec un libellé (niveau, quiz, SOC, accueil, coach).
+- Verdict du quiz et résultat de la dernière commande du terminal annoncés automatiquement.
+- Corrections trouvées par les tests à 200 % de police : ligne de niveau de l'Accueil, en-tête du Profil, bandeau du terminal (une ligne). Champ de saisie du terminal porté à 48 dp.
+
+### Intégration continue
+- Workflow GitHub Actions : formatage, analyse, tests, build APK debug. Aucune publication, aucun secret.
+
+### Tests
+- 266 tests (237 auparavant), dont des tests d'accessibilité (police à 200 %, zones tactiles, libellés).
+
 ## [1.3.0] - 2026-11-23
 
 ### Simulateur SOC

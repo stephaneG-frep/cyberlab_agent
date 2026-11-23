@@ -22,6 +22,16 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lu d'un bloc par TalkBack : « Cours : 3 ».
+    return Semantics(
+      container: true,
+      label: '$label : $value',
+      excludeSemantics: true,
+      child: _tile(context),
+    );
+  }
+
+  Widget _tile(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
@@ -64,6 +74,15 @@ class SkillBar extends StatelessWidget {
     final c = color ?? CyberLabSeed.blue;
     final blocks = (level / 10).round().clamp(0, 10);
     final bar = '█' * blocks + '░' * (10 - blocks);
+    // La barre en caractères █░ serait épelée : on donne un libellé clair.
+    return Semantics(
+      label: '$label : niveau $level sur 100',
+      excludeSemantics: true,
+      child: _bar(context, c, bar),
+    );
+  }
+
+  Widget _bar(BuildContext context, Color c, String bar) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -99,9 +118,12 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      child: Semantics(
+        header: true,
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

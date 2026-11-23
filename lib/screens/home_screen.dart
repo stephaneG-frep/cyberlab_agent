@@ -25,6 +25,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         leading: Builder(
           builder: (context) => IconButton(
+            tooltip: 'Menu',
             icon: const Icon(Icons.menu),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
@@ -75,17 +76,22 @@ class HomeScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.military_tech, color: Colors.amber),
                 const SizedBox(width: 8),
-                Text(
-                  'Niveau ${user.level}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Niveau ${user.level}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  '${user.xp} XP',
-                  style: Theme.of(context).textTheme.titleMedium,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${user.xp} XP',
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
               ],
             ),
@@ -93,6 +99,7 @@ class HomeScreen extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
+                semanticsLabel: 'Progression vers le niveau ${user.level + 1}',
                 value: user.progressToNext / 100,
                 minHeight: 10,
                 color: CyberLabSeed.blue,

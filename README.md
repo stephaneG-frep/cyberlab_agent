@@ -4,7 +4,7 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.3.0** (code 4).
+Version : **1.4.0** (code 5).
 
 ## Fonctionnalités
 
@@ -20,6 +20,9 @@ Version : **1.3.0** (code 4).
   - gestionnaire de labs en simulation.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
 - **Progression** : XP, niveaux, 13 badges (dont « Analyste SOC » et « Analyste réseau »), compétences, série quotidienne, temps d'apprentissage.
+- **Prérequis** : chaque cours indique les cours conseillés avant lui (état et accès direct). Ce sont des recommandations : rien n'est verrouillé, mais la liste « Apprendre » signale les prérequis manquants et « Continuer ma formation » propose d'abord un cours dont les prérequis sont faits.
+- **Rappel quotidien** (facultatif, désactivé par défaut) : une notification locale par jour à l'heure choisie (Paramètres → Rappel quotidien), sautée les jours où l'on a déjà pratiqué.
+- **Accessibilité** : libellés pour le lecteur d'écran (TalkBack) sur les boutons, statistiques, barres de progression et compétences ; résultats du quiz et du terminal annoncés automatiquement ; affichage vérifié avec une police agrandie à 200 % ; zones tactiles d'au moins 48 dp.
 - **Notes**, **Docs** (10 cheat sheets), mode sombre ou clair.
 
 ## Règles de progression
@@ -67,6 +70,14 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 - **Migration depuis la v1.0** : une ancienne clé stockée en clair est copiée dans le stockage sécurisé, puis relue. Elle n'est supprimée des préférences qu'après une relecture identique. En cas d'échec, elle reste utilisable, un avertissement s'affiche et une nouvelle tentative a lieu au démarrage suivant.
 - **Sauvegardes Android** : les règles sont des **listes blanches** (`res/xml/backup_rules.xml` et `res/xml/data_extraction_rules.xml`). Seul `FlutterSharedPreferences.xml` est sauvegardé et transféré entre appareils. Il contient la progression, les notes, les réglages non secrets **et l'historique du coach** (questions et réponses), ce que l'application indique dans Paramètres et dans le coach. Les fichiers du stockage sécurisé n'y figurent jamais, quel que soit leur nom. Après une restauration, il faut donc ressaisir les clés API. Exception : si la migration d'une ancienne clé v1.0 échoue, cette clé reste en clair dans les préférences jusqu'à la migration suivante, et un avertissement le signale.
 
+## Rappel quotidien
+
+- Notification **locale**, programmée sur l'appareil (`flutter_local_notifications`) : aucun serveur, aucune donnée envoyée.
+- Désactivé par défaut. L'autorisation d'afficher des notifications (Android 13+) n'est demandée qu'au moment de l'activation ; en cas de refus, le rappel reste désactivé et un message l'explique.
+- Horaire **approximatif** : aucune alarme exacte n'est demandée (pas de permission sensible), Android peut décaler le rappel de quelques minutes.
+- Le rappel est replanifié à chaque ouverture de l'application et à chaque activité : s'il y a déjà eu une activité aujourd'hui, le prochain rappel est demain. Il est reprogrammé après un redémarrage du téléphone (`RECEIVE_BOOT_COMPLETED`).
+- Le texte ne contient aucun chiffre (il ne peut donc pas devenir faux entre deux ouvertures). Le réglage n'est pas inclus dans les exports.
+
 ## Sécurité réseau
 
 - La permission `INTERNET` est déclarée dans le manifeste principal.
@@ -105,7 +116,9 @@ Analyse :
 
 ## Développement
 
-Prérequis : Flutter 3.44+ / Dart 3.12+ et Android SDK (`minSdk` 24).
+Prérequis : Flutter 3.47+ / Dart 3.13+ et Android SDK (`minSdk` 24, `compileSdk` 36). Le *desugaring* Java est activé dans `android/app/build.gradle.kts` (requis par les notifications). `flutter_local_notifications` est épinglé en 22.3.3 : la version 23 exige `compileSdk` 37 et AGP 9.1.
+
+**Intégration continue** (`.github/workflows/ci.yml`) : à chaque push sur `main` et à chaque pull request, GitHub Actions vérifie le formatage, lance `flutter analyze` et `flutter test`, puis compile un APK **debug** pour vérifier le projet Android. Rien n'est publié, aucun secret n'est utilisé et l'APK n'est pas conservé.
 
 ```bash
 flutter pub get

@@ -76,6 +76,7 @@ class _QuizRunnerState extends State<QuizRunner> {
         ),
         const SizedBox(height: 4),
         LinearProgressIndicator(
+          semanticsLabel: 'Quiz : question ${_index + 1} sur $total',
           value: (_index + 1) / total,
           minHeight: 6,
           color: CyberLabSeed.blue,
@@ -248,13 +249,17 @@ class _QuizRunnerState extends State<QuizRunner> {
           color: correct
               ? Colors.green.withValues(alpha: 0.2)
               : Colors.red.withValues(alpha: 0.2),
-          child: ListTile(
-            leading: Icon(
-              correct ? Icons.check_circle : Icons.cancel,
-              color: correct ? Colors.greenAccent : Colors.redAccent,
+          // Annoncé automatiquement par le lecteur d'écran.
+          child: Semantics(
+            liveRegion: true,
+            child: ListTile(
+              leading: Icon(
+                correct ? Icons.check_circle : Icons.cancel,
+                color: correct ? Colors.greenAccent : Colors.redAccent,
+              ),
+              title: Text(correct ? 'Bonne réponse !' : 'Réponse incorrecte'),
+              subtitle: Text(subtitle),
             ),
-            title: Text(correct ? 'Bonne réponse !' : 'Réponse incorrecte'),
-            subtitle: Text(subtitle),
           ),
         ),
         const SizedBox(height: 8),
