@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/user_state.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
+import '../widgets/path_picker.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -49,11 +50,17 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             Text('Niveau ${user.level} · ${user.xp} XP'),
                             Text(
-                              'Chemin : ${_pathLabel(user.selectedPath)}',
+                              'Parcours : ${app.currentPath.label}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ),
+                      ),
+                      TextButton.icon(
+                        key: const ValueKey('change-path'),
+                        onPressed: () => showPathPicker(context),
+                        icon: const Icon(Icons.alt_route, size: 18),
+                        label: const Text('Changer'),
                       ),
                     ],
                   ),
@@ -159,21 +166,6 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _pathLabel(String p) {
-    switch (p) {
-      case 'fundamentals':
-        return 'Fondamentaux';
-      case 'linux':
-        return 'Linux';
-      case 'networking':
-        return 'Réseau';
-      case 'web_security':
-        return 'Sécurité Web';
-      default:
-        return p;
-    }
   }
 }
 

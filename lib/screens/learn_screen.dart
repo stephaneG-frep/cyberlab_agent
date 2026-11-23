@@ -13,7 +13,9 @@ class LearnScreen extends StatefulWidget {
 }
 
 class _LearnScreenState extends State<LearnScreen> {
-  String _category = 'fundamentals';
+  /// Catégorie choisie à la main ; null = celle du parcours.
+  String? _picked;
+  String? _pathSeen;
   String _query = '';
 
   static const _cats = [
@@ -28,7 +30,14 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    var courses = CourseLibrary.byCategory(_category);
+    final path = app.user.selectedPath;
+    if (path != _pathSeen) {
+      // Nouveau parcours : on revient à sa catégorie.
+      _pathSeen = path;
+      _picked = null;
+    }
+    final category = _picked ?? app.currentPath.id;
+    var courses = CourseLibrary.byCategory(category);
     if (_query.isNotEmpty) {
       courses = courses
           .where((c) => c.title.toLowerCase().contains(_query.toLowerCase()))
@@ -60,13 +69,13 @@ class _LearnScreenState extends State<LearnScreen> {
                         avatar: Icon(
                           icon,
                           size: 18,
-                          color: _category == id
+                          color: category == id
                               ? Colors.white
                               : categoryColor(id),
                         ),
-                        label: Text(label),
-                        selected: _category == id,
-                        onSelected: (_) => setState(() => _category = id),
+                        label: Text(id == path ? '$label ★' : label),
+                        selected: category == id,
+                        onSelected: (_) => setState(() => _picked = id),
                       ),
                     ),
                 ],

@@ -114,11 +114,14 @@ void main() {
       },
     );
 
-    test('guard désactivé : simulation sans aucun effet réel', () {
+    test('guard désactivé : seul le système de fichiers VIRTUEL change', () {
       final engine = TerminalEngine()..guardEnabled = false;
-      final r = engine.run('rm -rf dossier');
+      final r = engine.run('rm -rf documents');
       expect(r.blocked, isFalse);
-      expect(r.output, contains('simulation'));
+      expect(r.exitCode, 0);
+      expect(engine.run('ls').output, isNot(contains('documents')));
+      engine.run('labreset');
+      expect(engine.run('ls').output, contains('documents'));
     });
   });
 

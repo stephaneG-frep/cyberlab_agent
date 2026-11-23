@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
-import '../data/course_library.dart';
+import '../models/course.dart';
 import '../widgets/common.dart';
+import '../widgets/path_picker.dart';
 import 'course_view.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -18,11 +19,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final courses = CourseLibrary.all;
-    final nextCourse = courses.firstWhere(
-      (c) => !app.user.completedCourses.contains(c.id),
-      orElse: () => courses.first,
-    );
+    final nextCourse = app.nextCourse;
 
     return Scaffold(
       appBar: AppBar(
@@ -41,7 +38,20 @@ class HomeScreen extends StatelessWidget {
         children: [
           _levelCard(context, app),
           const SizedBox(height: 16),
-          _continueCard(context, app, nextCourse),
+          _pathCard(context, app),
+          const SizedBox(height: 8),
+          if (nextCourse != null)
+            _continueCard(context, app, nextCourse)
+          else
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.emoji_events, color: Colors.amber),
+                title: Text('Tous les cours sont terminés !'),
+                subtitle: Text(
+                  'Rejouez les quiz, attaquez les CTF ou entraînez-vous au Lab.',
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           _statsGrid(app),
           if (app.user.skills.isNotEmpty) ...[
@@ -100,7 +110,24 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _continueCard(BuildContext context, AppState app, dynamic next) {
+  Widget _pathCard(BuildContext context, AppState app) {
+    final path = app.currentPath;
+    final progress = app.pathProgress;
+    return Card(
+      key: const ValueKey('home-path'),
+      child: ListTile(
+        leading: Icon(path.icon, color: categoryColor(path.id)),
+        title: Text('Parcours ${path.label}'),
+        subtitle: Text('${progress.done}/${progress.total} cours terminés'),
+        trailing: TextButton(
+          onPressed: () => showPathPicker(context),
+          child: const Text('Changer'),
+        ),
+      ),
+    );
+  }
+
+  Widget _continueCard(BuildContext context, AppState app, Course next) {
     return Card(
       color: CyberLabSeed.blue.withValues(alpha: 0.15),
       child: InkWell(

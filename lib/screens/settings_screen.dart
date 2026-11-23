@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ai_service.dart';
 import '../services/app_state.dart';
+import '../services/backup_service.dart';
 import '../widgets/common.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.files = const SystemBackupFiles()});
+
+  /// Accès aux fichiers d'export (injectable pour les tests).
+  final BackupFiles files;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -98,6 +102,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
     hasKey: !_deleteKey && (_apiKey.text.trim().isNotEmpty || _hasStoredKey),
   );
 
+  bool _transferring = false;
+
+  Future<void> _export() async {
+    var includeCoach = false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Exporter ma progression'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Un fichier JSON contenant votre progression, vos notes et vos '
+                'réglages sera créé à l\'emplacement de votre choix '
+                '(Téléchargements, Drive…). Les clés API n\'y figurent jamais.',
+              ),
+              CheckboxListTile(
+                key: const ValueKey('export-coach'),
+                contentPadding: EdgeInsets.zero,
+                value: includeCoach,
+                onChanged: (v) => setLocal(() => includeCoach = v ?? false),
+                title: const Text('Inclure l\'historique du coach'),
+                subtitle: const Text('Vos questions et ses réponses'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              key: const ValueKey('export-confirm'),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Exporter'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _transferring = true);
+    try {
+      final app = context.read<AppState>();
+      final json = await app.exportData(includeCoach: includeCoach);
+      final saved = await widget.files.save(
+        BackupFormat.fileName(DateTime.now()),
+        json,
+      );
+      _snack(saved ? 'Sauvegarde exportée.' : 'Export annulé.');
+    } catch (_) {
+      _snack(
+        'Export impossible. Réessayez ou choisissez un autre emplacement.',
+      );
+    } finally {
+      if (mounted) setState(() => _transferring = false);
+    }
+  }
+
+  Future<void> _import() async {
+    setState(() => _transferring = true);
+    BackupPreview? preview;
+    try {
+      final raw = await widget.files.open();
+      if (raw == null) {
+        _snack('Import annulé.');
+        return;
+      }
+      preview = BackupFormat.decode(raw);
+    } on BackupFormatException catch (e) {
+      _snack(e.message);
+      return;
+    } catch (_) {
+      _snack('Impossible de lire ce fichier.');
+      return;
+    } finally {
+      if (mounted) setState(() => _transferring = false);
+    }
+    if (!mounted) return;
+    final b = preview;
+    final date = b.exportedAt == null
+        ? 'date inconnue'
+        : MaterialLocalizations.of(context).formatShortDate(b.exportedAt!);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remplacer la progression ?'),
+        content: Text(
+          'Sauvegarde du $date :\n'
+          '• niveau ${b.user.level}, ${b.user.xp} XP\n'
+          '• ${b.user.completedCourses.length} cours terminés, '
+          '${b.user.solvedChallenges.length} CTF résolus\n'
+          '• ${b.notes.length} note(s)'
+          '${b.coachHistory != null ? '\n• ${b.coachHistory!.length} message(s) du coach' : ''}'
+          '${b.skippedItems > 0 ? '\n• ${b.skippedItems} élément(s) illisible(s) ignoré(s)' : ''}'
+          '\n\nVotre progression et vos notes actuelles seront remplacées. '
+          'Une copie de l\'état actuel est conservée sur l\'appareil. Les clés '
+          'API ne sont pas modifiées.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            key: const ValueKey('import-confirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remplacer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final error = await context.read<AppState>().importBackup(b);
+    if (!mounted) return;
+    _name.text = context.read<AppState>().user.name;
+    _snack(error ?? 'Progression importée.');
+  }
+
   void _confirmReset() {
     showDialog(
       context: context,
@@ -105,7 +230,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Réinitialiser la progression ?'),
         content: const Text(
           'Cette action efface les cours terminés, badges, XP et notes. '
-          'Les réglages et clés IA ne sont pas réinitialisés ici. Continuer ?',
+          'Les réglages et clés IA ne sont pas réinitialisés ici. Pensez à '
+          'exporter votre progression avant si vous voulez la garder. '
+          'Continuer ?',
         ),
         actions: [
           TextButton(
@@ -325,6 +452,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.save),
                       label: const Text('Enregistrer'),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SectionTitle('Sauvegarde de la progression'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Exportez votre progression et vos notes dans un fichier '
+                    'pour les retrouver sur un autre téléphone ou après une '
+                    'réinstallation. Les clés API ne sont jamais exportées.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.tonalIcon(
+                        key: const ValueKey('export-button'),
+                        onPressed: _transferring ? null : _export,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Exporter'),
+                      ),
+                      OutlinedButton.icon(
+                        key: const ValueKey('import-button'),
+                        onPressed: _transferring ? null : _import,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Importer'),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -1,8 +1,35 @@
 # Changelog
 
-## [Non publié]
+## [1.2.0] - 2026-11-23
 
-Corrections issues de l'audit du 2026-11-22.
+### Parcours d'apprentissage
+- Le parcours se choisit enfin (Profil → « Changer », ou carte Parcours de l'Accueil). Il en existe 6, un par catégorie de cours.
+- L'Accueil affiche le parcours, sa progression (cours terminés / total) et propose le premier cours non terminé de ce parcours, puis d'un autre parcours une fois celui-ci terminé.
+- L'onglet Apprendre s'ouvre sur la catégorie du parcours (marquée ★). Tous les cours restent accessibles.
+
+### Premier lancement
+- Nouvel écran d'accueil en 3 étapes : présentation et règle éthique, prénom (facultatif), choix du parcours. « Passer » garde les valeurs par défaut.
+- Il n'est jamais montré à un utilisateur qui a déjà des données (XP, cours, notes…).
+
+### Export / import de la progression
+- Paramètres → « Sauvegarde de la progression » : export dans un fichier JSON à l'emplacement choisi (Téléchargements, Drive…) via le sélecteur de fichiers Android, sans permission de stockage.
+- Contenu : progression, notes, réglages non secrets et, sur demande, l'historique du coach. Les clés API et l'ancienne clé v1 ne sont **jamais** exportées (liste blanche).
+- Import : validation du fichier, aperçu (niveau, XP, cours, notes), confirmation, puis remplacement. L'état actuel est copié sous `*_corrupt_<horodatage>` avant remplacement. Les clés API de l'appareil sont conservées. Les récompenses déjà obtenues ne sont pas redonnées.
+- Nouvelle dépendance : `file_picker`.
+
+### Terminal simulé : système de fichiers virtuel
+- Le terminal devient un vrai shell pédagogique sur une arborescence **virtuelle** en mémoire (`/home/learner`, `/etc`, `/var/log`, `/root`…), avec des fichiers exploitables : `auth.log`, `access.log`, `/etc/passwd`, scripts, notes, rapport d'incident.
+- Commandes réelles : `cd`, `ls -la`, `cat`, `head`, `tail`, `grep` (`-ivncloErw`), `wc`, `sort`, `uniq -c`, `cut`, `awk '{print $N}'`, `sed s///`, `find` (`-name`, `-type`, `-user`, `-delete`, `-exec`), `tree`, `mkdir -p`, `touch`, `cp`, `mv`, `rm`, `rmdir`, `chmod` (octal et symbolique), `chown`, `file`, `stat`, `base64`, `history`, `env`…
+- Shell : tubes `|`, redirections `>`, `>>`, `<`, `2>/dev/null`, `2>&1`, `;`, `&&`, `||`, variables, `$?`, `$(…)`, jokers `*.log`, `~`.
+- Droits Linux simulés : `/etc/shadow`, `/var/log` et `/root` refusés à learner. `sudo commande` et `sudo -i` / `exit` pour root.
+- Scripts : `bash script.sh`, ou `./script.sh` après `chmod +x`. Le Command Guard s'applique à chaque ligne.
+- `labreset` restaure les fichiers d'origine. La session (fichiers, écran, historique) est conservée quand on change d'onglet du Lab. Bouton de rappel de la commande précédente.
+- Le moteur n'utilise aucun accès système : aucune commande n'est exécutée sur l'appareil (vérifié par un test).
+
+### Tests
+- 215 tests au total (171 auparavant) : terminal et système de fichiers virtuel, parcours, premier lancement, export et import, écrans associés.
+
+## Corrections de l'audit du 2026-11-22 (incluses dans la 1.2.0)
 
 ### Fiabilité du chargement
 - Chaque section (progression, notes, réglages, historique du coach) est chargée **séparément** : l'échec de l'une ne vide plus les autres.

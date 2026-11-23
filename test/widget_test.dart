@@ -15,7 +15,10 @@ import 'package:cyberlab_agent/screens/coach_screen.dart';
 import 'package:cyberlab_agent/screens/course_view.dart';
 import 'package:cyberlab_agent/screens/ctf_screen.dart';
 import 'package:cyberlab_agent/screens/notes_screen.dart';
+import 'package:cyberlab_agent/screens/profile_screen.dart';
 import 'package:cyberlab_agent/screens/settings_screen.dart';
+import 'package:cyberlab_agent/screens/terminal_screen.dart';
+import 'package:cyberlab_agent/services/backup_service.dart';
 import 'package:cyberlab_agent/services/app_state.dart';
 import 'package:cyberlab_agent/services/secret_store.dart';
 import 'package:cyberlab_agent/widgets/quiz_runner.dart';
@@ -32,6 +35,17 @@ Widget _wrapped(Widget child, {AppState? app}) =>
       child: MaterialApp(home: child),
     );
 
+/// Fait défiler la liste principale jusqu'à [target] puis le centre.
+Future<void> _reveal(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _smallScreen(WidgetTester tester) async {
   tester.view.physicalSize = const Size(320, 480);
   tester.view.devicePixelRatio = 1.0;
@@ -42,6 +56,9 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('l\'app se construit et affiche la navigation', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'settings': jsonEncode({'onboardingDone': true}),
+    });
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
@@ -307,4 +324,149 @@ void main() {
     );
     expect(find.textContaining('Solution (consultée'), findsOneWidget);
   });
+
+  testWidgets('premier lancement : prénom et parcours, puis accueil', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    expect(find.text('Bienvenue dans CyberLab Agent'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('onboarding-name')),
+      'Ada',
+    );
+    await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('path-linux')));
+    await tester.tap(find.byKey(const ValueKey('path-linux')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Ada'), findsWidgets);
+    expect(find.text('Parcours Linux'), findsOneWidget);
+    expect(find.text('Accueil'), findsWidgets);
+  });
+
+  testWidgets('premier lancement : « Passer » ouvre directement l\'app', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('onboarding-skip')));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcours Fondamentaux'), findsOneWidget);
+  });
+
+  testWidgets('profil : changement de parcours', (tester) async {
+    final app = _state();
+    await app.ready;
+    await tester.pumpWidget(_wrapped(const ProfileScreen(), app: app));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcours : Fondamentaux'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('change-path')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('path-python')));
+    await tester.tap(find.byKey(const ValueKey('path-python')));
+    await tester.pumpAndSettle();
+    expect(app.currentPath.id, 'python');
+    expect(find.text('Parcours : Python'), findsOneWidget);
+  });
+
+  testWidgets('Paramètres : export puis import d\'une sauvegarde', (
+    tester,
+  ) async {
+    final files = _FakeFiles();
+    final app = _state();
+    await app.ready;
+    await app.completeOnboarding(name: 'Ada', path: 'bash');
+    await tester.pumpWidget(_wrapped(SettingsScreen(files: files), app: app));
+    await tester.pumpAndSettle();
+
+    await _reveal(tester, find.byKey(const ValueKey('export-button')));
+    await tester.tap(find.byKey(const ValueKey('export-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('export-confirm')));
+    await tester.pumpAndSettle();
+    expect(files.savedName, startsWith('cyberlab-sauvegarde-'));
+    expect(files.saved, contains('"name": "Ada"'));
+    expect(find.text('Sauvegarde exportée.'), findsOneWidget);
+    // Laisse le message d'export disparaître (les messages sont en file).
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    // Import d'une autre sauvegarde.
+    files.toOpen = files.saved!.replaceFirst('"name": "Ada"', '"name": "Bob"');
+    await _reveal(tester, find.byKey(const ValueKey('import-button')));
+    await tester.tap(find.byKey(const ValueKey('import-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Remplacer la progression ?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('import-confirm')));
+    await tester.pumpAndSettle();
+    expect(app.user.name, 'Bob');
+    expect(find.text('Progression importée.'), findsOneWidget);
+  });
+
+  testWidgets('Paramètres : fichier invalide refusé sans rien modifier', (
+    tester,
+  ) async {
+    final files = _FakeFiles()..toOpen = '{"kind":"autre"}';
+    final app = _state();
+    await app.ready;
+    await app.completeOnboarding(name: 'Ada');
+    await tester.pumpWidget(_wrapped(SettingsScreen(files: files), app: app));
+    await tester.pumpAndSettle();
+    await _reveal(tester, find.byKey(const ValueKey('import-button')));
+    await tester.tap(find.byKey(const ValueKey('import-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('n\'est pas un export'), findsOneWidget);
+    expect(app.user.name, 'Ada');
+  });
+
+  testWidgets('terminal : commandes réelles et session conservée', (
+    tester,
+  ) async {
+    TerminalSession.reset();
+    addTearDown(TerminalSession.reset);
+    await tester.pumpWidget(const MaterialApp(home: TerminalScreen()));
+    await tester.enterText(
+      find.byKey(const ValueKey('terminal-input')),
+      'cd logs',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.textContaining(r'learner@cyberlab:~/logs$'), findsWidgets);
+    await tester.enterText(
+      find.byKey(const ValueKey('terminal-input')),
+      'grep -c Failed auth.log',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('7'), findsOneWidget);
+
+    // Écran recréé (ex. passage par l'onglet SOC) : rien n'est perdu.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(const MaterialApp(home: TerminalScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('7'), findsOneWidget);
+    expect(find.textContaining(r'learner@cyberlab:~/logs$'), findsWidgets);
+  });
+}
+
+class _FakeFiles implements BackupFiles {
+  String? saved;
+  String? savedName;
+  String? toOpen;
+
+  @override
+  Future<bool> save(String fileName, String content) async {
+    savedName = fileName;
+    saved = content;
+    return true;
+  }
+
+  @override
+  Future<String?> open() async => toOpen;
 }
