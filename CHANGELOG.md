@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1] - 2026-11-23
+
+### Quiz
+- 88 QCM sur 199 ont de nouvelles mauvaises réponses, plausibles et de longueur comparable (cinq bonnes réponses sont raccourcies, sans changer de sens). « Toujours choisir la plus longue » réussissait 65 % des QCM, contre 31 % maintenant (25 % au hasard).
+- Les identifiants des questions et la position des bonnes réponses ne changent pas : la progression est conservée.
+- Un test empêche ce biais de revenir (plus longue, plus courte, options en double).
+
 ## [1.6.0] - 2026-11-23
 
 ### Quiz (correction importante)
