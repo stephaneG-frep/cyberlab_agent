@@ -23,6 +23,7 @@ import 'package:cyberlab_agent/screens/terminal_screen.dart';
 import 'package:cyberlab_agent/screens/wireshark_screen.dart';
 import 'package:cyberlab_agent/widgets/soc_simulator.dart';
 import 'package:cyberlab_agent/services/backup_service.dart';
+import 'package:cyberlab_agent/services/reminder_service.dart';
 import 'package:cyberlab_agent/services/app_state.dart';
 import 'package:cyberlab_agent/services/secret_store.dart';
 import 'package:cyberlab_agent/widgets/quiz_runner.dart';
@@ -268,6 +269,7 @@ void main() {
     await tester.pumpWidget(_wrapped(const SettingsScreen()));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('ai-network-warning')), findsNothing);
+    await _reveal(tester, find.byKey(const ValueKey('ai-base-url')));
     await tester.enterText(
       find.byKey(const ValueKey('ai-base-url')),
       'http://192.168.1.20:11434',
@@ -601,6 +603,33 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('packet-17')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Printemps2026!'), findsOneWidget);
+  });
+
+  testWidgets('cours : prérequis signalés et accessibles', (tester) async {
+    final app = _state();
+    await app.ready;
+    final course = CourseLibrary.all.firstWhere((c) => c.id == 'lin-chmod');
+    await tester.pumpWidget(_wrapped(CourseView(course: course), app: app));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('prereq-warning')), findsOneWidget);
+    await _reveal(tester, find.byKey(const ValueKey('prereq-lin-permissions')));
+    await tester.tap(find.byKey(const ValueKey('prereq-lin-permissions')));
+    await tester.pumpAndSettle();
+    expect(find.text('Comprendre les permissions'), findsWidgets);
+  });
+
+  testWidgets('Paramètres : activer le rappel quotidien', (tester) async {
+    final reminders = MemoryReminderScheduler();
+    final app = AppState(secrets: MemorySecretStore(), reminders: reminders);
+    await app.ready;
+    await tester.pumpWidget(_wrapped(const SettingsScreen(), app: app));
+    await tester.pumpAndSettle();
+    await _reveal(tester, find.byKey(const ValueKey('reminder-switch')));
+    await tester.tap(find.byKey(const ValueKey('reminder-switch')));
+    await tester.pumpAndSettle();
+    expect(app.reminder.enabled, isTrue);
+    expect(reminders.scheduled, isNotNull);
+    expect(find.textContaining('Rappel activé à 19:00'), findsOneWidget);
   });
 }
 

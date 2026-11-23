@@ -156,6 +156,7 @@ class _CoachScreenState extends State<CoachScreen> {
           if (busy)
             const LinearProgressIndicator(
               key: ValueKey('coach-busy'),
+              semanticsLabel: 'Le coach prépare sa réponse',
               minHeight: 2,
             ),
           SafeArea(

@@ -64,6 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   Expanded(
                     child: LinearProgressIndicator(
+                      semanticsLabel: 'Étape ${_step + 1} sur $_steps',
                       value: (_step + 1) / _steps,
                       minHeight: 4,
                       color: CyberLabSeed.blue,

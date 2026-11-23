@@ -56,16 +56,18 @@ class ProfileScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      TextButton.icon(
+                      IconButton(
                         key: const ValueKey('change-path'),
+                        tooltip: 'Changer de parcours',
                         onPressed: () => showPathPicker(context),
-                        icon: const Icon(Icons.alt_route, size: 18),
-                        label: const Text('Changer'),
+                        icon: const Icon(Icons.alt_route),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
+                    semanticsLabel:
+                        'Progression vers le niveau ${user.level + 1}',
                     value: user.progressToNext / 100,
                     minHeight: 10,
                     color: CyberLabSeed.blue,

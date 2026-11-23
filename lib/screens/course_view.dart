@@ -110,16 +110,7 @@ class _CourseContent extends StatelessWidget {
                 .toList(),
           ),
         ),
-        if (course.prerequisites.isNotEmpty) ...[
-          _Section(
-            title: 'Prérequis',
-            child: Column(
-              children: course.prerequisites
-                  .map((p) => _bullet(p, icon: Icons.info_outline))
-                  .toList(),
-            ),
-          ),
-        ],
+        _PrerequisitesSection(course: course),
         ...course.sections.map((s) => _ContentSectionView(section: s)),
         _Section(
           title: 'Erreurs fréquentes',
@@ -478,6 +469,80 @@ class _ExerciseButton extends StatelessWidget {
           : null,
       icon: const Icon(Icons.fitness_center),
       label: Text('Valider l\'exercice (+$xp XP)'),
+    );
+  }
+}
+
+/// Prérequis du cours : cours liés (état et accès direct) ; à défaut, le
+/// texte rédigé (« Aucun prérequis… »). Recommandation, jamais un verrou.
+class _PrerequisitesSection extends StatelessWidget {
+  final Course course;
+  const _PrerequisitesSection({required this.course});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final prereqs = app.prerequisitesOf(course.id);
+    if (prereqs.isEmpty) {
+      if (course.prerequisites.isEmpty) return const SizedBox.shrink();
+      return _Section(
+        title: 'Prérequis',
+        child: Column(
+          children: course.prerequisites
+              .map((p) => _bullet(p, icon: Icons.info_outline))
+              .toList(),
+        ),
+      );
+    }
+    final missing = app.missingPrerequisites(course.id);
+    return _Section(
+      title: 'Prérequis',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (missing.isNotEmpty)
+            Container(
+              key: const ValueKey('prereq-warning'),
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                missing.length == 1
+                    ? 'Un cours conseillé avant celui-ci n\'est pas encore '
+                          'terminé. Vous pouvez continuer quand même.'
+                    : '${missing.length} cours conseillés avant celui-ci ne '
+                          'sont pas encore terminés. Vous pouvez continuer '
+                          'quand même.',
+              ),
+            ),
+          for (final p in prereqs)
+            Builder(
+              builder: (context) {
+                final done = app.user.completedCourses.contains(p.id);
+                return ListTile(
+                  key: ValueKey('prereq-${p.id}'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: Icon(
+                    done ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: done ? Colors.greenAccent : Colors.amber,
+                    semanticLabel: done ? 'terminé' : 'à faire',
+                  ),
+                  title: Text(p.title),
+                  subtitle: Text(categoryLabel(p.category)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => CourseView(course: p)),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 }

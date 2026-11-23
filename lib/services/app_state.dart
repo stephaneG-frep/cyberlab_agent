@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../data/badges.dart';
 import '../data/course_library.dart';
+import '../data/course_prerequisites.dart';
 import '../data/learning_paths.dart';
 import '../models/coach_message.dart';
 import '../models/course.dart';
@@ -10,6 +11,7 @@ import '../models/user_state.dart';
 import 'ai_service.dart';
 import 'backup_service.dart';
 import 'badge_service.dart';
+import 'reminder_service.dart';
 import 'secret_store.dart';
 import 'storage_service.dart';
 
@@ -58,8 +60,10 @@ class AppState extends ChangeNotifier {
     BadgeService? badges,
     List<Course>? courses,
     this.hostResolver,
+    ReminderScheduler? reminders,
   }) : storage = storage ?? StorageService(),
        secrets = secrets ?? SecureSecretStore(),
+       reminders = reminders ?? LocalReminderScheduler(),
        _clock = clock ?? DateTime.now,
        badgeService = badges ?? BadgeService(),
        _courses = {for (final c in courses ?? CourseLibrary.all) c.id: c},
@@ -91,6 +95,9 @@ Règles impératives :
 
   /// Résolution DNS injectable (tests) ; null = résolution système.
   final HostResolver? hostResolver;
+
+  /// Notifications de rappel (injectable pour les tests).
+  final ReminderScheduler reminders;
   final DateTime Function() _clock;
 
   /// Catalogue des cours (pour la condition de quiz de fin de cours).
@@ -209,6 +216,7 @@ Règles impératives :
     user.badgesEarned = badgeService.earnedIds(user);
     loaded = true;
     notifyListeners();
+    await syncReminder();
   }
 
   Future<void> _loadSection(
@@ -354,8 +362,9 @@ Règles impératives :
   Future<int> _reward(int Function() mutation) async {
     await ready;
     final gained = mutation();
-    user.registerActivity(_clock());
+    final newDay = user.registerActivity(_clock());
     await _persistUser();
+    if (newDay) await syncReminder();
     return gained;
   }
 
@@ -442,14 +451,87 @@ Règles impératives :
   Future<void> recordAttempt(String courseId) async {
     await ready;
     user.courseAttempts[courseId] = (user.courseAttempts[courseId] ?? 0) + 1;
-    user.registerActivity(_clock());
+    final newDay = user.registerActivity(_clock());
     await _persistUser();
+    if (newDay) await syncReminder();
   }
 
   /// Activité d'apprentissage sans récompense (ex. CTF tenté).
   Future<void> registerActivity() async {
     await ready;
-    if (user.registerActivity(_clock())) await _persistUser();
+    if (user.registerActivity(_clock())) {
+      await _persistUser();
+      await syncReminder();
+    }
+  }
+
+  // --------------------------------------------------- Rappel quotidien
+
+  ReminderSettings get reminder =>
+      ReminderSettings.fromJson(settings['reminder']);
+
+  /// Dernier problème de planification du rappel (affiché), sinon null.
+  String? reminderIssue;
+
+  /// Active, règle ou désactive le rappel. Retourne un message d'erreur, ou
+  /// null en cas de succès.
+  Future<String?> setReminder({
+    required bool enabled,
+    int? hour,
+    int? minute,
+  }) async {
+    await ready;
+    final current = reminder;
+    final next = ReminderSettings(
+      enabled: enabled,
+      hour: hour ?? current.hour,
+      minute: minute ?? current.minute,
+    );
+    if (enabled && !current.enabled) {
+      bool granted;
+      try {
+        granted = await reminders.requestPermission();
+      } catch (_) {
+        granted = false;
+      }
+      if (!granted) {
+        return 'Notifications refusées : autorisez-les pour CyberLab Agent '
+            'dans les réglages Android, puis réessayez.';
+      }
+    }
+    settings = {...settings, 'reminder': next.toJson()};
+    await _saveSettings();
+    if (!enabled) {
+      try {
+        await reminders.cancel();
+        reminderIssue = null;
+      } catch (_) {
+        reminderIssue = 'Le rappel n\'a pas pu être annulé.';
+      }
+    } else {
+      await syncReminder();
+    }
+    notifyListeners();
+    return reminderIssue;
+  }
+
+  /// (Re)planifie le rappel selon le réglage et l'activité du jour.
+  Future<void> syncReminder() async {
+    final r = reminder;
+    if (!r.enabled) return;
+    final now = _clock();
+    final when = nextReminder(
+      r,
+      now: now,
+      activeToday: user.lastActiveDay == localDayKey(now),
+    );
+    final text = reminderText(hasStreak: user.currentStreak(now) > 0);
+    try {
+      await reminders.scheduleDaily(when, text.title, text.body);
+      reminderIssue = null;
+    } catch (_) {
+      reminderIssue = 'Le rappel n\'a pas pu être programmé sur cet appareil.';
+    }
   }
 
   // ------------------------------------------------- Série, temps, badges
@@ -482,6 +564,8 @@ Règles impératives :
   /// Application au premier plan : le chronomètre démarre.
   void onAppResumed() {
     _activeSince ??= _clock();
+    // Nouveau jour depuis la dernière ouverture : replanifier le rappel.
+    if (loaded) syncReminder();
   }
 
   /// Application en arrière-plan : le temps n'est plus compté.
@@ -520,15 +604,27 @@ Règles impératives :
     );
   }
 
-  /// Prochain cours conseillé : le premier cours non terminé du parcours,
-  /// sinon le premier cours non terminé de la bibliothèque, sinon null.
+  /// Cours conseillés avant [courseId] (prérequis structurés).
+  List<Course> prerequisitesOf(String courseId) => [
+    for (final id in coursePrerequisites[courseId] ?? const <String>[])
+      ?_courses[id],
+  ];
+
+  /// Prérequis de [courseId] pas encore terminés.
+  List<Course> missingPrerequisites(String courseId) => prerequisitesOf(
+    courseId,
+  ).where((c) => !user.completedCourses.contains(c.id)).toList();
+
+  /// Prochain cours conseillé : dans le parcours, le premier cours non
+  /// terminé dont les prérequis sont faits (sinon le premier non terminé) ;
+  /// puis de même dans toute la bibliothèque ; null si tout est terminé.
   Course? get nextCourse {
     bool open(Course c) => !user.completedCourses.contains(c.id);
-    for (final c in currentPath.courses) {
-      if (open(c)) return c;
-    }
-    for (final c in _courses.values) {
-      if (open(c)) return c;
+    bool ready(Course c) => open(c) && missingPrerequisites(c.id).isEmpty;
+    for (final pool in [currentPath.courses, _courses.values.toList()]) {
+      final candidates = pool.where(open).toList();
+      if (candidates.isEmpty) continue;
+      return candidates.firstWhere(ready, orElse: () => candidates.first);
     }
     return null;
   }

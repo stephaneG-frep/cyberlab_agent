@@ -223,6 +223,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _snack(error ?? 'Progression importée.');
   }
 
+  Future<void> _toggleReminder(bool value) async {
+    final app = context.read<AppState>();
+    final error = await app.setReminder(enabled: value);
+    _snack(
+      error ??
+          (value
+              ? 'Rappel activé à ${app.reminder.label}.'
+              : 'Rappel désactivé.'),
+    );
+  }
+
+  Future<void> _pickReminderTime() async {
+    final app = context.read<AppState>();
+    final r = app.reminder;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: r.hour, minute: r.minute),
+    );
+    if (picked == null || !mounted) return;
+    final error = await app.setReminder(
+      enabled: r.enabled,
+      hour: picked.hour,
+      minute: picked.minute,
+    );
+    _snack(error ?? 'Heure du rappel : ${app.reminder.label}.');
+  }
+
   void _confirmReset() {
     showDialog(
       context: context,
@@ -302,6 +329,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Style labo cyber par défaut (activé)'),
               value: app.darkMode,
               onChanged: (v) => app.setDarkMode(v),
+            ),
+          ),
+          const SectionTitle('Rappel quotidien'),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  key: const ValueKey('reminder-switch'),
+                  title: const Text('Me rappeler de pratiquer'),
+                  subtitle: const Text(
+                    'Une notification locale par jour (rien n\'est envoyé sur '
+                    'Internet). Elle est sautée les jours où vous avez déjà '
+                    'pratiqué.',
+                  ),
+                  value: app.reminder.enabled,
+                  onChanged: _toggleReminder,
+                ),
+                ListTile(
+                  key: const ValueKey('reminder-time'),
+                  enabled: app.reminder.enabled,
+                  leading: const Icon(Icons.schedule),
+                  title: const Text('Heure du rappel'),
+                  subtitle: const Text(
+                    'Approximative : Android peut la '
+                    'décaler de quelques minutes pour économiser la batterie.',
+                  ),
+                  trailing: Text(
+                    app.reminder.label,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  onTap: app.reminder.enabled ? _pickReminderTime : null,
+                ),
+                if (app.reminderIssue != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Text(
+                      app.reminderIssue!,
+                      style: const TextStyle(color: Colors.orange),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SectionTitle('CyberCoach / IA'),

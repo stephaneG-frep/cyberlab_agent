@@ -49,6 +49,7 @@ class _LearnScreenState extends State<LearnScreen> {
         title: const Text('Apprendre'),
         actions: [
           IconButton(
+            tooltip: 'Rechercher un cours',
             icon: const Icon(Icons.search),
             onPressed: () => _showSearch(context, app),
           ),
@@ -111,6 +112,9 @@ class _LearnScreenState extends State<LearnScreen> {
                       final done = app.user.completedCourses.contains(
                         course.id,
                       );
+                      final missing = done
+                          ? 0
+                          : app.missingPrerequisites(course.id).length;
                       return Card(
                         child: ListTile(
                           leading: CircleAvatar(
@@ -118,16 +122,29 @@ class _LearnScreenState extends State<LearnScreen> {
                               course.category,
                             ).withValues(alpha: 0.2),
                             child: Icon(
-                              Icons.lock_open,
-                              color: categoryColor(course.category),
+                              missing > 0
+                                  ? Icons.lock_outline
+                                  : Icons.lock_open,
+                              color: missing > 0
+                                  ? Colors.amber
+                                  : categoryColor(course.category),
+                              semanticLabel: missing > 0
+                                  ? 'prérequis conseillés non terminés'
+                                  : null,
                             ),
                           ),
                           title: Text(course.title),
-                          subtitle: Text(course.level),
+                          subtitle: Text(
+                            missing > 0
+                                ? '${course.level} · $missing prérequis '
+                                      'conseillé${missing > 1 ? 's' : ''} à faire'
+                                : course.level,
+                          ),
                           trailing: done
                               ? const Icon(
                                   Icons.check_circle,
                                   color: Colors.greenAccent,
+                                  semanticLabel: 'terminé',
                                 )
                               : Text('${course.xp} XP'),
                           onTap: () => Navigator.of(context).push(

@@ -147,11 +147,17 @@ class _NoteEditorState extends State<_NoteEditor> {
         title: Text(widget.note == null ? 'Nouvelle note' : 'Modifier la note'),
         actions: [
           IconButton(
+            tooltip: _favorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+            isSelected: _favorite,
             icon: const Icon(Icons.star),
             color: _favorite ? Colors.amber : null,
             onPressed: () => setState(() => _favorite = !_favorite),
           ),
-          IconButton(icon: const Icon(Icons.check), onPressed: _save),
+          IconButton(
+            tooltip: 'Enregistrer la note',
+            icon: const Icon(Icons.check),
+            onPressed: _save,
+          ),
         ],
       ),
       body: ListView(
