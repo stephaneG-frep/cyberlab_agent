@@ -4,14 +4,16 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.4.0** (code 5).
+Version : **1.5.0** (code 6).
 
 ## Fonctionnalités
 
-- **Apprendre** : 95 cours en 6 catégories (Fondamentaux 12, Linux 21, Réseau 26, Bash 12, Python 12, Web 12).
+- **Apprendre** : 135 cours en 10 niveaux : Découverte (0, 12 cours), Informatique et réseaux (1, 26), Linux (2, 21), Bash (3, 12), Python (4, 12), Sécurité réseau (5, 10), Sécurité Web avec l'OWASP complet (6, 18), Cryptographie (7, 8), Réponse à incident (8, 8), Windows et Active Directory (9, 8).
+- **Pratique vérifiée** : 38 cours (tous les cours Bash et 18 cours Linux) proposent un exercice dans un terminal neuf : des critères (fichier créé, droits, contenu, résultat d'une commande) se cochent automatiquement, puis la solution de référence s'affiche. 15 XP une seule fois.
+- **Révision** : « Mes erreurs » reprend les questions ratées pas encore réussies (les réussir rapporte encore leurs XP) ; « Entraînement aléatoire » tire 10 questions des cours terminés. Accès depuis Apprendre (icône avec compteur) et l'Accueil.
 - **Quiz** : QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
 - **CTF** : 28 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting), filtrables par catégorie. 13 d'entre eux se résolvent dans le terminal du Lab, sur ses fichiers virtuels, et la solution affiche la commande correspondante (vérifiée par les tests). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
-- **Parcours** : 6 parcours (un par catégorie). Le parcours choisi oriente l'Accueil (« Continuer ma formation », progression du parcours) et l'onglet Apprendre. Il se change depuis le Profil ou l'Accueil.
+- **Parcours** : 10 parcours (un par niveau thématique). Le parcours choisi oriente l'Accueil (« Continuer ma formation », progression du parcours) et l'onglet Apprendre. Il se change depuis le Profil ou l'Accueil.
 - **Premier lancement** : présentation et règle éthique, prénom facultatif, choix du parcours. Il n'apparaît pas si des données existent déjà.
 - **Lab** :
   - terminal Linux simulé sur un système de fichiers virtuel (voir plus bas) ;
@@ -19,7 +21,7 @@ Version : **1.4.0** (code 5).
   - **Wireshark** : cours, mémo des filtres, **capture simulée** de 32 paquets avec de vrais filtres d'affichage (`ip.addr`, `tcp.flags.syn`, `contains`, `&&`, `||`, `!`…), 9 exercices validés sur le résultat du filtre (toute écriture équivalente est acceptée, 20 XP chacun), détail de chaque paquet, 4 scénarios d'analyse ;
   - gestionnaire de labs en simulation.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
-- **Progression** : XP, niveaux, 13 badges (dont « Analyste SOC » et « Analyste réseau »), compétences, série quotidienne, temps d'apprentissage.
+- **Progression** : XP, niveaux, 17 badges (dont « Analyste SOC », « Analyste réseau » et un par nouveau niveau), compétences, série quotidienne, temps d'apprentissage.
 - **Prérequis** : chaque cours indique les cours conseillés avant lui (état et accès direct). Ce sont des recommandations : rien n'est verrouillé, mais la liste « Apprendre » signale les prérequis manquants et « Continuer ma formation » propose d'abord un cours dont les prérequis sont faits.
 - **Rappel quotidien** (facultatif, désactivé par défaut) : une notification locale par jour à l'heure choisie (Paramètres → Rappel quotidien), sautée les jours où l'on a déjà pratiqué.
 - **Accessibilité** : libellés pour le lecteur d'écran (TalkBack) sur les boutons, statistiques, barres de progression et compétences ; résultats du quiz et du terminal annoncés automatiquement ; affichage vérifié avec une police agrandie à 200 % ; zones tactiles d'au moins 48 dp.
@@ -89,10 +91,11 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 Le terminal est un **shell pédagogique écrit en Dart** qui agit uniquement sur un **système de fichiers virtuel en mémoire** (`lib/services/virtual_fs.dart`). Aucune commande n'est exécutée sur l'appareil, aucun fichier réel n'est lu ni écrit, et `ping`, `nmap`, `curl` ou `ssh` restent des simulations. Un test vérifie que le moteur n'importe pas `dart:io`.
 
 - **Arborescence** : `/home/learner` (notes, `logs/auth.log`, `logs/access.log`, scripts, rapport d'incident), `/etc` (`passwd`, `shadow`, `hosts`, `ssh/sshd_config`…), `/var/log`, `/var/www`, `/root`, `/tmp`.
-- **Commandes** : `pwd`, `cd`, `ls -la`, `cat`, `head`, `tail`, `grep` (`-i -v -n -c -l -o -E -r -w`), `wc`, `sort`, `uniq -c`, `cut`, `awk '{print $1}'`, `sed 's/a/b/g'`, `find` (`-name`, `-type`, `-user`, `-delete`, `-exec`), `tree`, `mkdir -p`, `touch`, `cp`, `mv`, `rm`, `rmdir`, `chmod`, `chown`, `file`, `stat`, `base64`, `history`, `env`, `whoami`, `id`, `sudo`…
-- **Shell** : `|`, `>`, `>>`, `<`, `2>/dev/null`, `2>&1`, `;`, `&&`, `||`, variables (`X=1`, `$HOME`, `$?`), `$(…)`, jokers (`*.log`), `~`.
+- **Commandes** : `pwd`, `cd`, `ls -la`, `cat`, `head`, `tail`, `grep` (`-i -v -n -c -l -o -E -r -w`), `wc`, `sort`, `uniq -c`, `cut`, `awk '{print $1}'`, `sed 's/a/b/g'`, `find` (`-name`, `-type`, `-user`, `-delete`, `-exec`), `tree`, `mkdir -p`, `touch`, `cp`, `mv`, `rm`, `rmdir`, `chmod`, `chown`, `file`, `stat`, `base64`, `tr`, `sha256sum`, `sha1sum`, `md5sum`, `seq`, `test` / `[ ]`, `history`, `env`, `whoami`, `id`, `sudo`…
+- **Shell** : `|`, `>`, `>>`, `<`, `2>/dev/null`, `2>&1`, `;`, `&&`, `||`, variables (`X=1`, `$HOME`, `$?`), `$(…)`, `$(( calcul ))`, jokers (`*.log`), `~`, découpage en mots comme bash.
+- **Structures** : `if`/`elif`/`else`/`fi`, `for … in … do … done`, `while` et `until`, fonctions `nom() { … }`, `break`, `continue`, `return`, commentaires `#`. Une boucle infinie est interrompue après 1000 commandes. Non pris en charge : un tube ou une redirection après `done` / `fi` (message explicite).
 - **Droits simulés** : `/etc/shadow`, `/var/log/*` et `/root` sont refusés à `learner`. `sudo commande` ou `sudo -i` (puis `exit`) donnent les droits root.
-- **Scripts** : `bash script.sh`, ou `./script.sh` après `chmod +x`.
+- **Scripts** : `bash script.sh arg1 arg2`, ou `./script.sh` après `chmod +x`, exécutés en entier (blocs sur plusieurs lignes), avec `$1`…`$9`, `$#`, `$@`, `$0`. Le Command Guard examine aussi le contenu des boucles, conditions et fonctions.
 - **`labreset`** restaure les fichiers d'origine. La session est conservée tant que l'application est ouverte, même en changeant d'onglet du Lab.
 
 Le **Command Guard** est une **règle pédagogique** du simulateur, pas une protection système, et sa liste de règles n'est pas exhaustive. Il analyse la commande réellement appelée, y compris chaque ligne d'un script. Désactivé, il laisse les protections « Linux » simulées s'appliquer (`rm -r /` refusé sans `--no-preserve-root`, droits) : seul le système de fichiers virtuel peut alors être effacé, et `labreset` le restaure.

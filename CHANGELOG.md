@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.5.0] - 2026-11-23
+
+### Nouveaux niveaux (40 cours, 135 au total)
+- **Niveau 5 - Sécurité réseau** (10 cours) : OSI et attaques par couche, segmentation et DMZ, pare-feu, IDS/IPS, VPN, Wi-Fi, homme du milieu, scan éthique, analyse de trafic, durcissement. Ce niveau était annoncé par le cours OSI mais n'existait pas.
+- **Sécurité Web** : 6 familles OWASP ajoutées (XSS, CSRF, SSRF, téléversement de fichiers, mauvaise configuration, composants vulnérables). La numérotation citée est celle du Top 10 2021.
+- **Niveau 7 - Cryptographie** (8 cours) : encodage, hachage et chiffrement, hachage, stockage des mots de passe, chiffrement symétrique et asymétrique, signatures et HMAC, certificats et PKI, TLS.
+- **Niveau 8 - Réponse à incident** (8 cours) : cycle de réponse, triage, confinement, preuves, journaux, chronologie, IOC, rapport et RGPD.
+- **Niveau 9 - Windows et Active Directory** (8 cours, angle défensif) : bases, PowerShell, journaux d'événements, comptes et privilèges, AD, Kerberos et NTLM, attaques courantes, durcissement.
+- Cours reliés au Lab (terminal, capture Wireshark, simulateur SOC), prérequis structurés, 4 nouveaux parcours et 4 nouveaux badges.
+
+### Exercices vérifiés dans le terminal
+- 38 cours proposent une « pratique vérifiée » : un terminal neuf et des critères cochés automatiquement (dossier ou fichier créé, droits, propriétaire, contenu, résultat ou forme d'une commande). 15 XP une seule fois, solution de référence affichée après la réussite.
+- Tous les cours Bash et 18 cours Linux en ont un, ainsi que des cours de crypto, de réponse à incident, de sécurité réseau et Web.
+- Chaque solution de référence est exécutée par les tests et doit valider tous les critères ; un terminal vierge ne doit pas les valider.
+
+### Terminal
+- Structures de contrôle : `if`/`elif`/`else`, `for`, `while`, `until`, fonctions, `break`, `continue`, `return`, commentaires, arithmétique `$(( ))`, commande `[ … ]` / `test`, `seq`.
+- Scripts exécutés en entier, avec leurs arguments (`$1`, `$#`, `$@`).
+- Découpage en mots des développements non protégés, comme bash.
+- `sha256sum`, `sha1sum`, `md5sum` (paquet `crypto`) ; `echo -n` respecté dans les tubes (empreintes exactes).
+- Le Command Guard examine aussi les boucles, conditions et corps de fonction.
+
+### Révision
+- Nouvel écran : « Mes erreurs » (questions ratées pas encore réussies) et « Entraînement aléatoire » (10 questions des cours terminés). Accès depuis Apprendre et l'Accueil.
+
+### Tests
+- 361 tests (266 auparavant).
+
 ## [1.4.0] - 2026-11-23
 
 ### Prérequis des cours

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart' as crypto;
 import 'virtual_fs.dart';
 
 /// Résultat de l'analyse du Command Guard.
@@ -60,6 +61,16 @@ class CommandGuard {
     'stdbuf': ({'-i', '-o', '-e'}, 0),
     'setsid': ({}, 0),
     'watch': ({'-n'}, 0),
+    // Mots-clés du shell : la commande réelle suit (« do rm -rf … »).
+    'do': ({}, 0),
+    'then': ({}, 0),
+    'else': ({}, 0),
+    'elif': ({}, 0),
+    'if': ({}, 0),
+    'while': ({}, 0),
+    'until': ({}, 0),
+    '!': ({}, 0),
+    '{': ({}, 0),
   };
 
   static const _shells = {'sh', 'bash', 'zsh', 'dash', 'ksh', 'fish', 'ash'};
@@ -170,6 +181,12 @@ class CommandGuard {
       final w = words[i];
       if (_assignment.hasMatch(w)) {
         i++; // VAR=valeur commande
+        continue;
+      }
+      // Définition de fonction : « nom() { commande… ; } ».
+      if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*\(\)\{?$').hasMatch(w) ||
+          w == 'function') {
+        i++;
         continue;
       }
       final prefix = _prefixes[commandName(w)];
@@ -467,14 +484,30 @@ class TerminalEngine {
       });
   }
 
-  String _var(String name) => switch (name) {
-    'HOME' => home,
-    'USER' || 'LOGNAME' => user,
-    'PWD' => cwd,
-    'HOSTNAME' => host,
-    '?' => '$_lastCode',
-    _ => _vars[name] ?? '',
-  };
+  /// Arguments du script ou de la fonction en cours ($0, $1…).
+  List<String> _positional = const [];
+  String _scriptName = 'bash';
+
+  /// Fonctions définies dans la session (nom() { … }).
+  final Map<String, List<_Node>> _functions = {};
+
+  String _var(String name) {
+    final n = int.tryParse(name);
+    if (n != null) {
+      if (n == 0) return _scriptName;
+      return n <= _positional.length ? _positional[n - 1] : '';
+    }
+    return switch (name) {
+      'HOME' => home,
+      'USER' || 'LOGNAME' => user,
+      'PWD' => cwd,
+      'HOSTNAME' => host,
+      '?' => '$_lastCode',
+      '#' => '${_positional.length}',
+      '@' || '*' => _positional.join(' '),
+      _ => _vars[name] ?? '',
+    };
+  }
 
   /// Exécute une ligne saisie par l'utilisateur.
   CommandResult run(String input) {
@@ -505,21 +538,131 @@ class TerminalEngine {
         return _LineResult(msg, 1, blocked: true);
       }
     }
-    final List<(String, String)> segments;
+    final List<_Node> nodes;
     try {
-      segments = _splitTop(line);
+      nodes = _parseScript(line);
     } on FormatException catch (e) {
       _lastCode = 2;
       return _LineResult('bash: ${e.message}', 2);
     }
-    final out = <String>[];
-    var code = _lastCode;
-    var clear = false;
+    final acc = _Acc(_lastCode, errSink);
+    _execNodes(nodes, depth, acc);
+    if (acc.ctl == 'limit') {
+      acc.out.add(
+        'bash: exécution interrompue après $_maxSteps commandes '
+        '(limite du simulateur : boucle infinie ?)',
+      );
+    }
+    return _LineResult(acc.out.join('\n'), acc.code, clear: acc.clear);
+  }
+
+  static const _maxSteps = 1000;
+
+  /// Exécute une liste d'instructions (simples ou composées).
+  void _execNodes(List<_Node> nodes, int depth, _Acc acc) {
+    for (final node in nodes) {
+      if (acc.ctl != null) return;
+      if (++acc.steps > _maxSteps) {
+        acc.ctl = 'limit';
+        return;
+      }
+      switch (node) {
+        case _Simple(:final text):
+          _runSimple(text, depth, acc);
+        case _If(:final branches, :final orElse):
+          var taken = false;
+          for (final (cond, body) in branches) {
+            _execNodes(cond, depth, acc);
+            if (acc.ctl != null) return;
+            if (acc.code == 0) {
+              _execNodes(body, depth, acc);
+              taken = true;
+              break;
+            }
+          }
+          if (!taken) {
+            if (orElse != null) {
+              _execNodes(orElse, depth, acc);
+            } else {
+              acc.code = 0;
+            }
+          }
+        case _For(:final variable, :final words, :final body):
+          final List<String> items;
+          if (words == null) {
+            items = List.of(_positional);
+          } else {
+            final err = StringBuffer();
+            items = _expandGlobs(
+              _lex(words, depth, err).where((t) => !t.op).toList(),
+            );
+            if (err.isNotEmpty) acc.addErr(_strip(err.toString()));
+          }
+          acc.code = 0;
+          for (final item in items) {
+            _vars[variable] = item;
+            _execNodes(body, depth, acc);
+            if (!_loopControl(acc)) break;
+          }
+        case _While(:final cond, :final body, :final until):
+          acc.code = 0;
+          while (true) {
+            _execNodes(cond, depth, acc);
+            if (acc.ctl != null) return;
+            if ((acc.code == 0) == until) {
+              acc.code = 0;
+              break;
+            }
+            _execNodes(body, depth, acc);
+            if (!_loopControl(acc)) break;
+          }
+        case _FuncDef(:final name, :final body):
+          _functions[name] = body;
+          acc.code = 0;
+      }
+    }
+  }
+
+  /// Gère break / continue en fin de tour ; retourne faux pour sortir.
+  bool _loopControl(_Acc acc) {
+    if (acc.ctl == 'continue') {
+      acc.ctl = null;
+      return true;
+    }
+    if (acc.ctl == 'break') {
+      acc.ctl = null;
+      return false;
+    }
+    return acc.ctl == null;
+  }
+
+  /// Une instruction simple : enchaînements && et ||, tubes, redirections.
+  void _runSimple(String line, int depth, _Acc acc) {
+    final t = line.trim();
+    if (t == 'break' || t == 'continue') {
+      acc.ctl = t;
+      return;
+    }
+    final ret = RegExp(r'^(return|exit)(\s+(\d+))?$').firstMatch(t);
+    if (ret != null && (ret.group(1) == 'return' || depth > 0)) {
+      acc.ctl = 'return';
+      acc.code = int.tryParse(ret.group(3) ?? '') ?? acc.code;
+      _lastCode = acc.code;
+      return;
+    }
+    final List<(String, String)> segments;
+    try {
+      segments = _splitTop(t);
+    } on FormatException catch (e) {
+      acc.addErr('bash: ${e.message}');
+      acc.code = _lastCode = 2;
+      return;
+    }
     var first = true;
     for (final (conn, text) in segments) {
       if (!first) {
-        if (conn == '&&' && code != 0) continue;
-        if (conn == '||' && code == 0) continue;
+        if (conn == '&&' && acc.code != 0) continue;
+        if (conn == '||' && acc.code == 0) continue;
       }
       first = false;
       final subErr = StringBuffer();
@@ -531,23 +674,309 @@ class TerminalEngine {
         r = _Out('', 'bash: ${e.message}', 2);
       }
       if (r.clear) {
-        clear = true;
-        out.clear();
+        acc.clear = true;
+        acc.out.clear();
       }
-      code = r.code;
-      _lastCode = code;
+      acc.code = r.code;
+      _lastCode = r.code;
       final err = _strip('$subErr${r.err}');
-      if (err.isNotEmpty) {
-        if (errSink != null) {
-          errSink.writeln(err);
-        } else {
-          out.add(err);
-        }
-      }
+      if (err.isNotEmpty) acc.addErr(err);
       final o = _strip(r.out);
-      if (o.isNotEmpty) out.add(o);
+      if (o.isNotEmpty) acc.out.add(o);
     }
-    return _LineResult(out.join('\n'), code, clear: clear);
+  }
+
+  // ------------------------------------------------ Analyse des scripts
+
+  /// Découpe un texte en instructions au premier niveau (`;`, retour à la
+  /// ligne), hors guillemets, `$(…)` et accolades de fonction ; retire les
+  /// commentaires `#`.
+  static List<String> _splitStatements(String s) {
+    final out = <String>[];
+    final buf = StringBuffer();
+    String? quote;
+    var paren = 0, brace = 0;
+    void push() {
+      final t = buf.toString().trim();
+      if (t.isNotEmpty) out.add(t);
+      buf.clear();
+    }
+
+    bool isSpace(String c) => c == ' ' || c == '\t' || c == '\n' || c == ';';
+    for (var i = 0; i < s.length; i++) {
+      final c = s[i];
+      final prev = i > 0 ? s[i - 1] : ' ';
+      final next = i + 1 < s.length ? s[i + 1] : ' ';
+      if (quote != null) {
+        buf.write(c);
+        if (c == '\\' && quote == '"' && i + 1 < s.length) {
+          buf.write(next);
+          i++;
+        } else if (c == quote) {
+          quote = null;
+        }
+        continue;
+      }
+      if (c == '\\' && i + 1 < s.length) {
+        buf
+          ..write(c)
+          ..write(next);
+        i++;
+        continue;
+      }
+      if (c == "'" || c == '"' || c == '`') {
+        quote = c;
+        buf.write(c);
+        continue;
+      }
+      if (c == '#' && (isSpace(prev) || prev == '(') && paren == 0) {
+        while (i + 1 < s.length && s[i + 1] != '\n') {
+          i++;
+        }
+        continue;
+      }
+      if (c == r'$' && next == '(') paren++;
+      if (c == '(' && prev == '(' && paren > 0) paren++;
+      if (c == ')' && paren > 0) paren--;
+      if (c == '{' && (isSpace(prev) || prev == ')') && isSpace(next)) brace++;
+      if (c == '}' && brace > 0 && isSpace(prev) && isSpace(next)) brace--;
+      if (paren == 0 &&
+          brace == 0 &&
+          (c == '\n' || (c == ';' && next != ';'))) {
+        push();
+        continue;
+      }
+      buf.write(c);
+    }
+    if (quote != null) {
+      throw const FormatException('erreur de syntaxe : guillemet non fermé');
+    }
+    push();
+    // « then cmd », « do cmd », « else cmd » : mot-clé puis instruction.
+    final norm = <String>[];
+    for (final st in out) {
+      final m = RegExp(r'^(then|do|else)\s+(.+)$', dotAll: true).firstMatch(st);
+      if (m != null) {
+        norm
+          ..add(m.group(1)!)
+          ..add(m.group(2)!);
+      } else {
+        norm.add(st);
+      }
+    }
+    return norm;
+  }
+
+  static String _firstWord(String s) => s.split(RegExp(r'\s+')).first;
+
+  static List<_Node> _parseScript(String text) {
+    final st = _splitStatements(text);
+    final pos = [0];
+    final nodes = _parseBlock(st, pos, const {});
+    return nodes;
+  }
+
+  static final _funcRe = RegExp(
+    r'^(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(\))?\s*\{(.*)\}$',
+    dotAll: true,
+  );
+
+  static List<_Node> _parseBlock(
+    List<String> t,
+    List<int> pos,
+    Set<String> terminators,
+  ) {
+    final nodes = <_Node>[];
+    String expect(Set<String> kws) {
+      if (pos[0] >= t.length) {
+        throw FormatException(
+          'erreur de syntaxe : « ${kws.join(' » ou « ')} » attendu',
+        );
+      }
+      final w = _firstWord(t[pos[0]]);
+      if (kws.contains(w) && t[pos[0]] != w) {
+        throw FormatException(
+          '« $w » suivi d\'un tube ou d\'une redirection n\'est pas pris en '
+          'charge par ce terminal simulé (placez la boucle dans un script, '
+          'ou redirigez chaque commande)',
+        );
+      }
+      if (!kws.contains(w)) {
+        throw FormatException(
+          'erreur de syntaxe près de « ${t[pos[0]]} » '
+          '(« ${kws.join(' » ou « ')} » attendu)',
+        );
+      }
+      pos[0]++;
+      return w;
+    }
+
+    List<_Node> condition(String rest, Set<String> until) => [
+      if (rest.isNotEmpty) _Simple(rest),
+      ..._parseBlock(t, pos, until),
+    ];
+
+    while (pos[0] < t.length) {
+      final s = t[pos[0]];
+      final kw = _firstWord(s);
+      if (terminators.contains(kw)) return nodes;
+      pos[0]++;
+      final rest = s.length > kw.length ? s.substring(kw.length).trim() : '';
+      switch (kw) {
+        case 'if':
+          final branches = <(List<_Node>, List<_Node>)>[];
+          List<_Node>? orElse;
+          var cond = condition(rest, const {'then'});
+          expect(const {'then'});
+          var body = _parseBlock(t, pos, const {'elif', 'else', 'fi'});
+          branches.add((cond, body));
+          while (true) {
+            if (pos[0] >= t.length) {
+              throw const FormatException('erreur de syntaxe : « fi » attendu');
+            }
+            final w = _firstWord(t[pos[0]]);
+            if (w == 'elif') {
+              final r = t[pos[0]].substring(4).trim();
+              pos[0]++;
+              cond = condition(r, const {'then'});
+              expect(const {'then'});
+              body = _parseBlock(t, pos, const {'elif', 'else', 'fi'});
+              branches.add((cond, body));
+            } else if (w == 'else') {
+              pos[0]++;
+              orElse = _parseBlock(t, pos, const {'fi'});
+            } else {
+              expect(const {'fi'});
+              break;
+            }
+          }
+          nodes.add(_If(branches, orElse));
+        case 'for':
+          final m = RegExp(
+            r'^([A-Za-z_][A-Za-z0-9_]*)(?:\s+in\s*(.*))?$',
+            dotAll: true,
+          ).firstMatch(rest);
+          if (m == null) {
+            throw const FormatException(
+              'erreur de syntaxe : for VARIABLE in LISTE attendu',
+            );
+          }
+          expect(const {'do'});
+          final body = _parseBlock(t, pos, const {'done'});
+          expect(const {'done'});
+          nodes.add(_For(m.group(1)!, m.group(2), body));
+        case 'while' || 'until':
+          final cond = condition(rest, const {'do'});
+          expect(const {'do'});
+          final body = _parseBlock(t, pos, const {'done'});
+          expect(const {'done'});
+          nodes.add(_While(cond, body, until: kw == 'until'));
+        case 'then' || 'do' || 'done' || 'fi' || 'else' || 'elif':
+          throw FormatException(
+            'erreur de syntaxe près du symbole inattendu « $kw »',
+          );
+        default:
+          final f = _funcRe.firstMatch(s);
+          if (f != null && (s.contains('()') || s.startsWith('function '))) {
+            nodes.add(_FuncDef(f.group(1)!, _parseScript(f.group(2)!)));
+          } else {
+            nodes.add(_Simple(s));
+          }
+      }
+    }
+    if (terminators.isNotEmpty) {
+      throw FormatException(
+        'erreur de syntaxe : « ${terminators.join(' » ou « ')} » attendu',
+      );
+    }
+    return nodes;
+  }
+
+  /// Arithmétique entière de $(( … )) : + - * / % ( ), comparaisons,
+  /// variables par leur nom ou avec $.
+  String _arith(String expr) {
+    final e = expr
+        .replaceAllMapped(
+          RegExp(r'\$?\{?([A-Za-z_][A-Za-z0-9_]*)\}?'),
+          (m) => int.tryParse(_var(m.group(1)!).trim())?.toString() ?? '0',
+        )
+        .replaceAllMapped(
+          RegExp(r'\$([0-9#])'),
+          (m) => int.tryParse(_var(m.group(1)!))?.toString() ?? '0',
+        );
+    final tokens = RegExp(
+      r'\d+|<=|>=|==|!=|[-+*/%()<>]',
+    ).allMatches(e).map((m) => m.group(0)!).toList();
+    var i = 0;
+    String? peek() => i < tokens.length ? tokens[i] : null;
+    late int Function() cmp;
+    int atom() {
+      final t = peek();
+      if (t == null) throw const FormatException('expression incomplète');
+      i++;
+      if (t == '(') {
+        final v = cmp();
+        if (peek() != ')') throw const FormatException('« ) » manquante');
+        i++;
+        return v;
+      }
+      if (t == '-') return -atom();
+      if (t == '+') return atom();
+      final n = int.tryParse(t);
+      if (n == null) throw FormatException('symbole inattendu « $t »');
+      return n;
+    }
+
+    int mul() {
+      var v = atom();
+      while (peek() == '*' || peek() == '/' || peek() == '%') {
+        final op = tokens[i++];
+        final r = atom();
+        if (op != '*' && r == 0) {
+          throw const FormatException('division par zéro');
+        }
+        v = switch (op) {
+          '*' => v * r,
+          '/' => v ~/ r,
+          _ => v % r,
+        };
+      }
+      return v;
+    }
+
+    int add() {
+      var v = mul();
+      while (peek() == '+' || peek() == '-') {
+        final op = tokens[i++];
+        final r = mul();
+        v = op == '+' ? v + r : v - r;
+      }
+      return v;
+    }
+
+    cmp = () {
+      var v = add();
+      while (const {'<', '>', '<=', '>=', '==', '!='}.contains(peek())) {
+        final op = tokens[i++];
+        final r = add();
+        final b = switch (op) {
+          '<' => v < r,
+          '>' => v > r,
+          '<=' => v <= r,
+          '>=' => v >= r,
+          '==' => v == r,
+          _ => v != r,
+        };
+        v = b ? 1 : 0;
+      }
+      return v;
+    };
+    if (tokens.isEmpty) return '0';
+    final v = cmp();
+    if (i != tokens.length) {
+      throw FormatException('erreur arithmétique près de « ${tokens[i]} »');
+    }
+    return '$v';
   }
 
   /// Découpe au premier niveau sur `;`, `&&`, `||` et `&` (hors guillemets
@@ -644,9 +1073,39 @@ class TerminalEngine {
       quoted = false;
     }
 
-    int dollar(int i) {
+    /// Écrit une valeur développée. Hors guillemets, elle est découpée en
+    /// mots sur les espaces (comme bash) ; une valeur vide ne crée aucun mot.
+    void emit(String v, {required bool split}) {
+      if (!split) {
+        buf.write(v);
+        return;
+      }
+      final parts = v.split(RegExp(r'\s+'));
+      for (var k = 0; k < parts.length; k++) {
+        if (k > 0) flush();
+        if (parts[k].isNotEmpty) {
+          buf.write(parts[k]);
+          has = true;
+        }
+      }
+    }
+
+    int dollar(int i, {bool inQuotes = false}) {
       // s[i] == '$' ; retourne l'index suivant l'expression.
       final next = i + 1 < s.length ? s[i + 1] : '';
+      if (next == '(' && i + 2 < s.length && s[i + 2] == '(') {
+        // $(( expression arithmétique ))
+        var d = 2, j = i + 3;
+        for (; j < s.length && d > 0; j++) {
+          if (s[j] == '(') d++;
+          if (s[j] == ')') d--;
+        }
+        if (d != 0) {
+          throw const FormatException('erreur de syntaxe : « )) » manquant');
+        }
+        emit(_arith(s.substring(i + 3, j - 2)), split: !inQuotes);
+        return j;
+      }
       if (next == '(') {
         var d = 1, j = i + 2;
         for (; j < s.length && d > 0; j++) {
@@ -656,7 +1115,10 @@ class TerminalEngine {
         if (d != 0) {
           throw const FormatException('erreur de syntaxe : « ) » manquante');
         }
-        buf.write(_substitute(s.substring(i + 2, j - 1), depth, subErr));
+        emit(
+          _substitute(s.substring(i + 2, j - 1), depth, subErr),
+          split: !inQuotes,
+        );
         return j;
       }
       if (next == '{') {
@@ -664,11 +1126,16 @@ class TerminalEngine {
         if (end < 0) {
           throw const FormatException('erreur de syntaxe : « } » manquante');
         }
-        buf.write(_var(s.substring(i + 2, end)));
+        emit(_var(s.substring(i + 2, end)), split: !inQuotes);
         return end + 1;
       }
-      if (next == '?') {
-        buf.write(_var('?'));
+      if (next == '?' || next == '#' || next == '@' || next == '*') {
+        // "$@" : un mot par argument, même entre guillemets.
+        emit(_var(next), split: !inQuotes || next == '@');
+        return i + 2;
+      }
+      if (RegExp(r'[0-9]').hasMatch(next)) {
+        emit(_var(next), split: !inQuotes);
         return i + 2;
       }
       final m = RegExp(
@@ -678,7 +1145,7 @@ class TerminalEngine {
         buf.write(r'$');
         return i + 1;
       }
-      buf.write(_var(m.group(0)!));
+      emit(_var(m.group(0)!), split: !inQuotes);
       return i + 1 + m.group(0)!.length;
     }
 
@@ -704,7 +1171,7 @@ class TerminalEngine {
             buf.write(s[j + 1]);
             j += 2;
           } else if (s[j] == r'$') {
-            j = dollar(j);
+            j = dollar(j, inQuotes: true);
           } else {
             buf.write(s[j]);
             j++;
@@ -738,8 +1205,10 @@ class TerminalEngine {
         continue;
       }
       if (c == r'$') {
+        final before = buf.length;
         i = dollar(i) - 1;
-        has = true;
+        // « $ » seul (non suivi d'un nom) reste un caractère littéral.
+        if (buf.length > before) has = true;
         continue;
       }
       if (c == ' ' || c == '\t') {
@@ -905,7 +1374,9 @@ class TerminalEngine {
         }
       }
       if (errText.isNotEmpty) err.writeln(_strip(errText));
-      stdin = outText;
+      // Entrée du maillon suivant : la sortie telle qu'elle serait écrite,
+      // avec son saut de ligne final (sauf echo -n).
+      stdin = outText.isEmpty || r.noNewline ? outText : '${_strip(outText)}\n';
       last = _Out(outText, '', r.code);
     }
     return _Out(last.out, err.toString(), last.code);
@@ -1171,6 +1642,11 @@ class TerminalEngine {
     'export',
     'base64',
     'tr',
+    'test',
+    'seq',
+    'sha256sum',
+    'sha1sum',
+    'md5sum',
     'true',
     'false',
     'labreset',
@@ -1193,8 +1669,10 @@ class TerminalEngine {
         rest = ['-a', ...rest];
     }
     if (name.contains('/')) {
-      return _runScript(name, depth, direct: true);
+      return _runScript(name, rest, depth, direct: true);
     }
+    final fn = _functions[name];
+    if (fn != null) return _callFunction(name, fn, rest, depth);
     switch (name) {
       case 'help':
         return _ok(_help);
@@ -1366,6 +1844,17 @@ class TerminalEngine {
         return _base64(rest, stdin);
       case 'tr':
         return _tr(rest, stdin);
+      case 'test':
+        return _test(rest);
+      case '[':
+        if (rest.isEmpty || rest.last != ']') {
+          return _fail('bash: [ : « ] » manquant', 2);
+        }
+        return _test(rest.sublist(0, rest.length - 1));
+      case 'seq':
+        return _seq(rest);
+      case 'sha256sum' || 'sha1sum' || 'md5sum':
+        return _digest(name, rest, stdin);
       case 'true':
         return _ok('');
       case 'false':
@@ -1389,7 +1878,7 @@ class TerminalEngine {
           final r = _runLine(rest[1], depth + 1);
           return _Out(r.text, '', r.code);
         }
-        return _runScript(rest.first, depth, direct: false);
+        return _runScript(rest.first, rest.sublist(1), depth, direct: false);
       case 'nano' || 'vi' || 'vim':
         return _ok(
           '(simulation) Éditeur indisponible dans ce terminal.\n'
@@ -1413,6 +1902,7 @@ Fichiers   : pwd  cd  ls [-la]  cat  head  tail  touch  mkdir [-p]  rmdir
              rm [-r]  cp [-r]  mv  find  tree  file  stat  chmod  chown
 Texte      : grep [-ivncloEr]  wc [-lwc]  sort [-rnu]  uniq [-c]  cut -d -f
              awk '{print \$1}'  sed 's/a/b/g'  tr  echo  base64 [-d]
+             sha256sum  sha1sum  md5sum
 Système    : whoami  id  ps  df  free  uname  date  env  history  sudo
 Réseau     : ifconfig  ping  nmap  curl  ssh  (simulés)
 Shell      : |  >  >>  <  2>/dev/null  ;  &&  ||  \$VAR  \$(cmd)  *.log
@@ -1949,7 +2439,7 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     }
     var text = rest.join(' ');
     if (escapes) text = text.replaceAll(r'\n', '\n').replaceAll(r'\t', '\t');
-    return _ok(newline ? text : text);
+    return _Out(text, '', 0, noNewline: !newline);
   }
 
   _Out _touch(List<String> args) {
@@ -2425,9 +2915,37 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     return _Out(out.join('\n'), err.toString(), err.isEmpty ? 0 : 1);
   }
 
+  /// Entrées BRUTES (octets exacts) : stdin tel quel, fichiers tels quels.
+  ({List<(String, String)> inputs, String err}) _rawInputs(
+    String cmd,
+    List<String> files,
+    String? stdin,
+  ) {
+    if (files.isEmpty || (files.length == 1 && files.first == '-')) {
+      return (inputs: [('-', stdin ?? '')], err: '');
+    }
+    return _inputs(cmd, files, stdin);
+  }
+
+  /// sha256sum, sha1sum, md5sum : empreinte des octets exacts.
+  _Out _digest(String cmd, List<String> args, String? stdin) {
+    final o = _opts(args);
+    final res = _rawInputs(cmd, o.rest, stdin);
+    final hash = switch (cmd) {
+      'md5sum' => crypto.md5,
+      'sha1sum' => crypto.sha1,
+      _ => crypto.sha256,
+    };
+    final out = [
+      for (final (name, content) in res.inputs)
+        '${hash.convert(utf8.encode(content))}  $name',
+    ];
+    return _Out(out.join('\n'), res.err, res.err.isEmpty ? 0 : 1);
+  }
+
   _Out _base64(List<String> args, String? stdin) {
     final o = _opts(args);
-    final res = _inputs('base64', o.rest, stdin);
+    final res = _rawInputs('base64', o.rest, stdin);
     final text = res.inputs.map((e) => e.$2).join();
     if (o.flags.contains('d') || o.flags.contains('--decode')) {
       try {
@@ -2541,7 +3059,12 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     }
   }
 
-  _Out _runScript(String path, int depth, {required bool direct}) {
+  _Out _runScript(
+    String path,
+    List<String> args,
+    int depth, {
+    required bool direct,
+  }) {
     final abs = _abs(path);
     final VNode n;
     try {
@@ -2567,17 +3090,127 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     if (depth >= _maxDepth) {
       return _fail('bash: $path : imbrication trop profonde');
     }
-    final out = <String>[];
-    var code = 0;
-    for (final line in _lines(n.content)) {
-      final t = line.trim();
-      if (t.isEmpty || t.startsWith('#')) continue;
-      final r = _runLine(t, depth + 1);
-      if (r.text.isNotEmpty) out.add(r.text);
-      code = r.code;
-      if (r.blocked) break;
+    // Le script s'exécute en entier (boucles et conditions sur plusieurs
+    // lignes), avec ses arguments $1, $2…
+    final savedArgs = _positional, savedName = _scriptName;
+    _positional = args;
+    _scriptName = path;
+    try {
+      final r = _runLine(n.content, depth + 1);
+      return _Out(r.text, '', r.code);
+    } finally {
+      _positional = savedArgs;
+      _scriptName = savedName;
     }
-    return _Out(out.join('\n'), '', code);
+  }
+
+  _Out _callFunction(
+    String name,
+    List<_Node> body,
+    List<String> args,
+    int depth,
+  ) {
+    if (depth >= _maxDepth) {
+      return _fail('bash: $name : récursion trop profonde');
+    }
+    final saved = _positional;
+    _positional = args;
+    try {
+      final acc = _Acc(0, null);
+      _execNodes(body, depth + 1, acc);
+      return _Out(acc.out.join('\n'), '', acc.code);
+    } finally {
+      _positional = saved;
+    }
+  }
+
+  /// test / [ … ] : fichiers, chaînes et entiers.
+  _Out _test(List<String> a) {
+    bool? eval(List<String> x) {
+      if (x.isEmpty) return false;
+      if (x.first == '!') {
+        final v = eval(x.sublist(1));
+        return v == null ? null : !v;
+      }
+      final orIdx = x.indexOf('-o');
+      if (orIdx > 0) {
+        final l = eval(x.sublist(0, orIdx)), r = eval(x.sublist(orIdx + 1));
+        return l == null || r == null ? null : l || r;
+      }
+      final andIdx = x.indexOf('-a');
+      if (andIdx > 0) {
+        final l = eval(x.sublist(0, andIdx)), r = eval(x.sublist(andIdx + 1));
+        return l == null || r == null ? null : l && r;
+      }
+      if (x.length == 1) return x.first.isNotEmpty;
+      if (x.length == 2) {
+        final arg = x[1];
+        VNode? node() {
+          try {
+            return fs.existing(_abs(arg), user);
+          } on FsError {
+            return null;
+          }
+        }
+
+        return switch (x[0]) {
+          '-z' => arg.isEmpty,
+          '-n' => arg.isNotEmpty,
+          '-e' => node() != null,
+          '-f' => node()?.isDir == false,
+          '-d' => node()?.isDir == true,
+          '-s' => (node()?.size ?? 0) > 0 && node()?.isDir == false,
+          '-r' => node() != null && VirtualFs.canRead(node()!, user),
+          '-w' => node() != null && VirtualFs.canWrite(node()!, user),
+          '-x' => node() != null && VirtualFs.canExec(node()!, user),
+          _ => null,
+        };
+      }
+      if (x.length == 3) {
+        final (l, op, r) = (x[0], x[1], x[2]);
+        if (op == '=' || op == '==') return l == r;
+        if (op == '!=') return l != r;
+        final a = int.tryParse(l), b = int.tryParse(r);
+        if (const {'-eq', '-ne', '-lt', '-le', '-gt', '-ge'}.contains(op)) {
+          if (a == null || b == null) return null;
+          return switch (op) {
+            '-eq' => a == b,
+            '-ne' => a != b,
+            '-lt' => a < b,
+            '-le' => a <= b,
+            '-gt' => a > b,
+            _ => a >= b,
+          };
+        }
+      }
+      return null;
+    }
+
+    final v = eval(a);
+    if (v == null) {
+      return _fail('bash: test : expression incorrecte : ${a.join(' ')}', 2);
+    }
+    return _Out('', '', v ? 0 : 1);
+  }
+
+  /// seq FIN | seq DÉBUT FIN | seq DÉBUT PAS FIN
+  _Out _seq(List<String> a) {
+    final n = a.map(int.tryParse).toList();
+    if (n.isEmpty || n.length > 3 || n.contains(null)) {
+      return _fail('seq: opérande incorrect');
+    }
+    final (start, step, end) = switch (n.length) {
+      1 => (1, 1, n[0]!),
+      2 => (n[0]!, 1, n[1]!),
+      _ => (n[0]!, n[1]!, n[2]!),
+    };
+    if (step == 0) return _fail('seq: pas nul');
+    final out = <String>[];
+    for (var v = start; step > 0 ? v <= end : v >= end; v += step) {
+      out.add('$v');
+      if (out.length > 10000) break;
+    }
+    return _ok(out.join('\n'));
   }
 
   // ================================================ Simulations réseau
@@ -2758,6 +3391,63 @@ ${fs.lookup('/var/www/html/index.html')?.content.trimRight() ?? '<h1>Hello Cyber
   }
 }
 
+/// Instructions du shell (arbre d'exécution).
+sealed class _Node {
+  const _Node();
+}
+
+class _Simple extends _Node {
+  const _Simple(this.text);
+  final String text;
+}
+
+class _If extends _Node {
+  const _If(this.branches, this.orElse);
+  final List<(List<_Node>, List<_Node>)> branches;
+  final List<_Node>? orElse;
+}
+
+class _For extends _Node {
+  const _For(this.variable, this.words, this.body);
+  final String variable;
+
+  /// null : « for x » sans « in » (parcourt $@).
+  final String? words;
+  final List<_Node> body;
+}
+
+class _While extends _Node {
+  const _While(this.cond, this.body, {this.until = false});
+  final List<_Node> cond;
+  final List<_Node> body;
+  final bool until;
+}
+
+class _FuncDef extends _Node {
+  const _FuncDef(this.name, this.body);
+  final String name;
+  final List<_Node> body;
+}
+
+/// Accumulateur d'exécution : sorties, code, signaux (break, return…).
+class _Acc {
+  _Acc(this.code, this.errSink);
+  final List<String> out = [];
+  final StringBuffer? errSink;
+  int code;
+  bool clear = false;
+  String? ctl;
+  int steps = 0;
+
+  void addErr(String e) {
+    if (errSink != null) {
+      errSink!.writeln(e);
+    } else {
+      out.add(e);
+    }
+  }
+}
+
 class _Tok {
   final String text;
   final bool op;
@@ -2776,7 +3466,17 @@ class _Out {
   final String err;
   final int code;
   final bool clear;
-  const _Out(this.out, this.err, this.code, {this.clear = false});
+
+  /// Sortie SANS saut de ligne final (echo -n) : compte pour sha256sum,
+  /// base64 ou wc -c en aval d'un tube.
+  final bool noNewline;
+  const _Out(
+    this.out,
+    this.err,
+    this.code, {
+    this.clear = false,
+    this.noNewline = false,
+  });
 }
 
 class _LineResult {

@@ -102,4 +102,53 @@ const Map<String, List<String>> coursePrerequisites = {
   'web-owasp': ['web-intro'],
   'web-owasp-access': ['web-auth'],
   'web-owasp-injection': ['web-intro'],
+
+  // Sécurité réseau (niveau 5)
+  'ns-osi': ['net-protocols', 'net-tcp'],
+  'ns-segmentation': ['ns-osi'],
+  'ns-firewall': ['net-firewall', 'ns-segmentation'],
+  'ns-idsips': ['ns-firewall'],
+  'ns-vpn': ['net-vpn', 'ns-osi'],
+  'ns-wifi': ['ns-osi'],
+  'ns-mitm': ['net-mac', 'net-dns'],
+  'ns-scan': ['net-ports', 'net-tcp'],
+  'ns-traffic': ['ns-scan', 'net-dns'],
+  'ns-hardening': ['ns-firewall', 'ns-traffic'],
+
+  // Sécurité Web : familles OWASP complémentaires (niveau 6)
+  'web-xss': ['web-owasp-injection', 'web-cookies'],
+  'web-csrf': ['web-sessions', 'web-cookies'],
+  'web-ssrf': ['web-api', 'ns-segmentation'],
+  'web-upload': ['web-owasp-access'],
+  'web-misconfig': ['web-headers'],
+  'web-components': ['web-owasp'],
+
+  // Cryptographie (niveau 7)
+  'cr-hash': ['cr-encoding'],
+  'cr-passwords': ['cr-hash'],
+  'cr-symmetric': ['cr-encoding'],
+  'cr-asymmetric': ['cr-symmetric'],
+  'cr-signatures': ['cr-asymmetric', 'cr-hash'],
+  'cr-pki': ['cr-signatures'],
+  'cr-tls': ['cr-pki', 'net-https'],
+
+  // Réponse à incident (niveau 8)
+  'ir-cycle': ['fund-soc'],
+  'ir-triage': ['ir-cycle'],
+  'ir-containment': ['ir-triage'],
+  'ir-evidence': ['ir-containment', 'cr-hash'],
+  'ir-logs': ['ir-evidence', 'lin-logs'],
+  'ir-timeline': ['ir-logs'],
+  'ir-ioc': ['ir-timeline'],
+  'ir-report': ['ir-ioc'],
+
+  // Windows et Active Directory (niveau 9)
+  'win-basics': ['net-os', 'net-permissions'],
+  'win-powershell': ['win-basics'],
+  'win-events': ['win-powershell', 'ir-logs'],
+  'win-accounts': ['win-basics'],
+  'win-ad': ['win-accounts'],
+  'win-kerberos': ['win-ad', 'cr-symmetric'],
+  'win-ad-attacks': ['win-kerberos', 'win-events'],
+  'win-hardening': ['win-ad-attacks'],
 };

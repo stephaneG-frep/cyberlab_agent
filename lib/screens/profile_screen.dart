@@ -189,6 +189,14 @@ IconData _badgeIcon(String name) {
       return Icons.flag;
     case 'workspace_premium':
       return Icons.workspace_premium;
+    case 'shield':
+      return Icons.shield;
+    case 'key':
+      return Icons.key;
+    case 'policy':
+      return Icons.policy;
+    case 'desktop_windows':
+      return Icons.desktop_windows;
     case 'radar':
       return Icons.radar;
     case 'filter_alt':

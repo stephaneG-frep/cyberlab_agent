@@ -16,11 +16,16 @@ class QuizRunner extends StatefulWidget {
   /// Compétence créditée avec les XP.
   final String? skill;
 
+  /// Mode révision : cours d'origine de chaque question (même longueur que
+  /// [questions]) ; remplace [scopeId] et [skill] question par question.
+  final List<({String scopeId, String title, String? skill})>? origins;
+
   const QuizRunner({
     super.key,
     required this.questions,
     required this.scopeId,
     this.skill,
+    this.origins,
   });
 
   @override
@@ -74,6 +79,12 @@ class _QuizRunnerState extends State<QuizRunner> {
           'Question ${_index + 1}/$total · ${q.xp} XP',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (widget.origins != null)
+          Text(
+            'Cours : ${widget.origins![_index].title}',
+            key: const ValueKey('quiz-origin'),
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
         const SizedBox(height: 4),
         LinearProgressIndicator(
           semanticsLabel: 'Quiz : question ${_index + 1} sur $total',
@@ -206,11 +217,12 @@ class _QuizRunnerState extends State<QuizRunner> {
     final answer = _currentAnswer(q);
     if (answer.trim().isEmpty) return; // jamais de réponse vide
     setState(() => _submitting = true);
+    final origin = widget.origins?[_index];
     final outcome = await context.read<AppState>().answerQuiz(
-      widget.scopeId,
+      origin?.scopeId ?? widget.scopeId,
       q,
       answer,
-      skill: widget.skill,
+      skill: origin == null ? widget.skill : origin.skill,
     );
     if (!mounted) return;
     setState(() {

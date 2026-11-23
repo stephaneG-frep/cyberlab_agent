@@ -54,6 +54,7 @@ class RewardKeys {
   static String soc(String alertId) => 'soc:$alertId';
   static String ctf(String challengeId) => 'ctf:$challengeId';
   static String wireshark(String exerciseId) => 'ws:$exerciseId';
+  static String terminal(String courseId) => 'term:$courseId';
 }
 
 /// Jour local au format AAAA-MM-JJ.
@@ -256,6 +257,10 @@ class UserState {
   /// Exercice de filtrage Wireshark réussi (une récompense par exercice).
   int solveFilterExercise(String exerciseId, int amount) =>
       grant(RewardKeys.wireshark(exerciseId), amount, skill: 'Réseau');
+
+  /// Exercice vérifié dans le terminal réussi (une récompense par cours).
+  int solveTerminalExercise(String courseId, int amount, {String? skill}) =>
+      grant(RewardKeys.terminal(courseId), amount, skill: skill);
 
   /// Nombre de récompenses dont la clé commence par [prefix] (`soc:`…).
   int rewardCount(String prefix) =>

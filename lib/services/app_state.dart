@@ -430,6 +430,9 @@ Règles impératives :
   Future<int> resolveSocAlert(String alertId, bool correct, int xp) =>
       _reward(() => user.resolveSocAlert(alertId, correct, xp));
 
+  Future<int> solveTerminalExercise(String courseId, int xp, {String? skill}) =>
+      _reward(() => user.solveTerminalExercise(courseId, xp, skill: skill));
+
   Future<int> solveFilterExercise(String exerciseId, int xp) =>
       _reward(() => user.solveFilterExercise(exerciseId, xp));
 
@@ -603,6 +606,22 @@ Règles impératives :
       total: courses.length,
     );
   }
+
+  // ------------------------------------------------------- Révision
+
+  /// Questions ratées et pas encore réussies, dans l'ordre des cours.
+  List<(Course, QuizQuestion)> get mistakes => [
+    for (final c in _courses.values)
+      for (final q in c.quiz)
+        if (user.quizResults['${c.id}/${q.id}'] == 0) (c, q),
+  ];
+
+  /// Questions des cours terminés (entraînement libre).
+  List<(Course, QuizQuestion)> get practicePool => [
+    for (final c in _courses.values)
+      if (user.completedCourses.contains(c.id))
+        for (final q in c.quiz) (c, q),
+  ];
 
   /// Cours conseillés avant [courseId] (prérequis structurés).
   List<Course> prerequisitesOf(String courseId) => [

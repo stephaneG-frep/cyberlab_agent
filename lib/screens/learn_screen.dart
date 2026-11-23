@@ -4,6 +4,7 @@ import '../data/course_library.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
 import 'course_view.dart';
+import 'review_screen.dart';
 
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
@@ -24,7 +25,11 @@ class _LearnScreenState extends State<LearnScreen> {
     ('networking', 'Réseau', Icons.hub),
     ('bash', 'Bash', Icons.code),
     ('python', 'Python', Icons.smart_toy),
+    ('network_security', 'Sécu. réseau', Icons.security),
     ('web_security', 'Web', Icons.language),
+    ('crypto', 'Crypto', Icons.key),
+    ('incident_response', 'Incidents', Icons.policy),
+    ('windows', 'Windows', Icons.desktop_windows),
   ];
 
   @override
@@ -48,6 +53,18 @@ class _LearnScreenState extends State<LearnScreen> {
       appBar: AppBar(
         title: const Text('Apprendre'),
         actions: [
+          IconButton(
+            key: const ValueKey('open-review'),
+            tooltip: 'Révision',
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ReviewScreen())),
+            icon: Badge(
+              isLabelVisible: app.mistakes.isNotEmpty,
+              label: Text('${app.mistakes.length}'),
+              child: const Icon(Icons.replay),
+            ),
+          ),
           IconButton(
             tooltip: 'Rechercher un cours',
             icon: const Icon(Icons.search),

@@ -5,6 +5,10 @@ import 'course_linux.dart';
 import 'course_networking.dart';
 import 'course_python.dart';
 import 'course_web.dart';
+import 'course_netsec.dart';
+import 'course_crypto.dart';
+import 'course_incident.dart';
+import 'course_windows.dart';
 
 /// Static library of all courses.
 class CourseLibrary {
@@ -17,7 +21,11 @@ class CourseLibrary {
       ...networkingCourses(),
       ...bashCourses(),
       ...pythonCourses(),
+      ...networkSecurityCourses(),
       ...webSecurityCourses(),
+      ...cryptoCourses(),
+      ...incidentCourses(),
+      ...windowsCourses(),
     ];
     return list;
   }
