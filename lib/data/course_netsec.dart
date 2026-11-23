@@ -184,7 +184,7 @@ Course _segmentation() => Course(
       'q1',
       "À quoi sert une DMZ ?",
       'qcm',
-      "Isoler les serveurs exposés à Internet du réseau interne|Accélérer le Wi-Fi|Chiffrer les e-mails|Remplacer l'antivirus",
+      "Isoler les serveurs exposés à Internet du réseau interne|Relier directement le réseau interne et Internet sans filtrage|Chiffrer les échanges entre les postes de travail|Donner un accès Wi-Fi rapide aux visiteurs de l'entreprise",
       '0',
       "Un serveur compromis en DMZ ne donne pas d'accès direct au réseau interne.",
     ]),
@@ -247,15 +247,19 @@ Course _firewall() => Course(
       text(
         "Un pare-feu à état mémorise les connexions établies. On autorise "
         "l'ouverture d'une connexion sortante, et les réponses reviennent "
-        "automatiquement, sans ouvrir de port entrant. C'est le cas de tous "
-        "les pare-feu modernes.",
+        "automatiquement, sans ouvrir de port entrant. C'est le cas de la "
+        "plupart des pare-feu actuels.",
       ),
       code(
-        "iptables -P INPUT DROP\n"
         "iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT\n"
         "iptables -A INPUT -i lo -j ACCEPT\n"
-        "iptables -A INPUT -p tcp --dport 22 -s 192.168.1.0/24 -j ACCEPT",
+        "iptables -A INPUT -p tcp --dport 22 -s 192.168.1.0/24 -j ACCEPT\n"
+        "iptables -P INPUT DROP",
         label: "iptables",
+      ),
+      warn(
+        "La politique DROP vient en dernier : appliquée en premier à "
+        "distance, elle couperait votre propre session SSH.",
       ),
     ]),
     sec("Ordre et journalisation", [
@@ -293,7 +297,7 @@ Course _firewall() => Course(
       'q2',
       "Que permet un pare-feu à état (stateful) ?",
       'qcm',
-      "Laisser revenir les réponses des connexions établies|Chiffrer le trafic|Bloquer les virus dans les fichiers|Attribuer les adresses IP",
+      "Laisser revenir les réponses des connexions établies|Chiffrer les connexions établies avec l'extérieur|Bloquer les virus contenus dans les fichiers téléchargés|Attribuer des adresses IP aux nouvelles machines",
       '0',
       "Il suit l'état des connexions : les réponses sont acceptées sans ouvrir de port entrant.",
     ]),
@@ -383,7 +387,7 @@ Course _idsIps() => Course(
       'q1',
       "Quelle est la différence principale entre un IDS et un IPS ?",
       'qcm',
-      "L'IPS peut bloquer le trafic, l'IDS seulement alerter|L'IDS chiffre le trafic|L'IPS remplace l'antivirus|Il n'y en a aucune",
+      "L'IPS peut bloquer le trafic, l'IDS seulement alerter|L'IDS peut bloquer le trafic, l'IPS seulement alerter|L'IPS surveille les postes, l'IDS surveille les e-mails|Il n'y en a aucune, ce sont deux noms du même outil",
       '0',
       "L'IPS est en coupure et peut agir ; l'IDS observe et alerte.",
     ]),
@@ -472,7 +476,7 @@ Course _vpn() => Course(
       'q1',
       "Un VPN « site à site » sert à...",
       'qcm',
-      "Relier deux réseaux de façon permanente|Bloquer les publicités|Chiffrer un disque dur|Remplacer le DNS",
+      "Relier deux réseaux de façon permanente|Connecter un télétravailleur de temps en temps|Masquer son adresse IP à un site web|Relier deux écrans à un même poste",
       '0',
       "Il relie par exemple le réseau du siège et celui d'une agence.",
     ]),
@@ -571,7 +575,7 @@ Course _wifi() => Course(
       'q2',
       "Qu'est-ce qu'un « evil twin » ?",
       'qcm',
-      "Un faux point d'accès imitant le vrai|Un virus de clé USB|Un second routeur de secours|Une sauvegarde chiffrée",
+      "Un faux point d'accès imitant le vrai|Un second routeur de secours du réseau|Un virus copié d'une clé USB à l'autre|Un répéteur qui étend la portée du Wi-Fi",
       '0',
       "Il porte le même nom de réseau pour attirer les connexions et les intercepter.",
     ]),
@@ -706,8 +710,9 @@ Course _scan() => Course(
   sections: [
     sec("Le cadre d'abord", [
       warn(
-        "Scanner un système sans autorisation écrite de son propriétaire est "
-        "illégal (en France, article 323-1 du Code pénal). On scanne son "
+        "Scanner un système sans autorisation expose à des poursuites : en "
+        "France, le Code pénal punit l'accès frauduleux à un système "
+        "(article 323-1) et sa tentative (article 323-7). On scanne son "
         "propre matériel, son lab, ou dans le cadre d'une mission signée qui "
         "précise le périmètre.",
       ),
@@ -765,11 +770,11 @@ Course _scan() => Course(
     ]),
     q(const [
       'q3',
-      "Vrai ou faux : scanner une adresse IP publique au hasard est légal tant qu'on n'exploite rien.",
+      "Vrai ou faux : scanner une adresse IP publique au hasard est sans risque juridique tant qu'on n'exploite rien.",
       'tf',
       'Faux',
       null,
-      "Sans autorisation, même un scan peut constituer une infraction.",
+      "Selon les circonstances, un scan non autorisé peut être vu comme une tentative d'accès frauduleux, et il enfreint souvent le contrat de votre fournisseur.",
     ]),
   ],
   exercises: [
@@ -841,11 +846,11 @@ Course _traffic() => Course(
   quiz: [
     q(const [
       'q1',
-      "Des connexions vers la même adresse exactement toutes les 60 secondes évoquent...",
+      "Un poste contacte une adresse inconnue toutes les 60 secondes, jour et nuit. À vérifier en priorité :",
       'qcm',
-      "Un balisage de malware|Une mise à jour normale|Un scan de ports|Une panne",
+      "Un balisage de malware|Un scan de ports|Une panne du réseau|Une attaque ARP",
       '0',
-      "La régularité mécanique est typique d'un malware qui contacte son serveur.",
+      "Cette régularité est typique d'un malware qui contacte son serveur. Des logiciels légitimes (supervision, synchronisation) font de même : on vérifie la destination avant de conclure.",
     ]),
     q(const [
       'q2',
@@ -947,7 +952,7 @@ Course _hardening() => Course(
       'q2',
       "Pourquoi désactiver Telnet ?",
       'qcm',
-      "Il transmet tout en clair, mots de passe compris|Il est trop lent|Il consomme trop de mémoire|Il est payant",
+      "Il transmet tout en clair, mots de passe compris|Il est trop lent pour administrer un serveur moderne|Il ne fonctionne que sur le réseau local|Il exige un certificat payant pour chaque serveur",
       '0',
       "SSH le remplace avec un canal chiffré.",
     ]),

@@ -4,14 +4,14 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.6.0** (code 7).
+Version : **1.7.1** (code 10).
 
 ## Fonctionnalités
 
 - **Apprendre** : 135 cours en 10 niveaux : Découverte (0, 12 cours), Informatique et réseaux (1, 26), Linux (2, 21), Bash (3, 12), Python (4, 12), Sécurité réseau (5, 10), Sécurité Web avec l'OWASP complet (6, 18), Cryptographie (7, 8), Réponse à incident (8, 8), Windows et Active Directory (9, 8).
 - **Pratique vérifiée** : 38 cours (tous les cours Bash et 18 cours Linux) proposent un exercice dans un terminal neuf : des critères (fichier créé, droits, contenu, résultat d'une commande) se cochent automatiquement, puis la solution de référence s'affiche. 15 XP une seule fois.
 - **Révision** : « Mes erreurs » reprend les questions ratées pas encore réussies (les réussir rapporte encore leurs XP) ; « Entraînement aléatoire » tire 10 questions des cours terminés. Accès depuis Apprendre (icône avec compteur) et l'Accueil.
-- **Quiz** : QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
+- **Quiz** : au moins 3 questions par cours ; avec 3 questions, la règle des 70 % les exige toutes (une question ratée peut être retentée). QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
 - **CTF** : 28 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting), filtrables par catégorie. 13 d'entre eux se résolvent dans le terminal du Lab, sur ses fichiers virtuels, et la solution affiche la commande correspondante (vérifiée par les tests). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
 - **Parcours** : 10 parcours (un par niveau thématique). Le parcours choisi oriente l'Accueil (« Continuer ma formation », progression du parcours) et l'onglet Apprendre. Il se change depuis le Profil ou l'Accueil.
 - **Premier lancement** : présentation et règle éthique, prénom facultatif, choix du parcours. Il n'apparaît pas si des données existent déjà.

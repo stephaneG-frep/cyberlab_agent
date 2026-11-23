@@ -77,6 +77,22 @@ Course _webIntro() => Course(
       '0',
       'Le navigateur est le client qui envoie des requêtes.',
     ]),
+    q(const [
+      'q2',
+      "Quelle brique d'un site s'exécute dans le navigateur ?",
+      'qcm',
+      "Le front-end|Le back-end|La base de données|Le serveur web",
+      '0',
+      "HTML, CSS et JavaScript s'exécutent côté client.",
+    ]),
+    q(const [
+      'q3',
+      "Dans quel format les API REST échangent-elles le plus souvent ?",
+      'qcm',
+      "PDF|JSON|CSS|ZIP",
+      '1',
+      "C'est le format courant des applications web et mobiles.",
+    ]),
   ],
   exercises: [
     ex(
@@ -142,9 +158,25 @@ Course _httpMethods() => Course(
       'q1',
       'Pourquoi éviter les données sensibles en GET ?',
       'qcm',
-      'elles apparaissent dans l\'URL/logs/historique|GET est plus lent|POST est plus sûr uniquement|rien de tout ça',
+      "elles apparaissent dans l'URL/logs/historique|elles sont limitées à quelques caractères seulement|elles sont modifiées par le serveur à la réception|GET ne fonctionne pas en HTTPS",
       '0',
       'Les paramètres GET sont visibles et journalisés.',
+    ]),
+    q(const [
+      'q2',
+      "Quelle méthode modifie partiellement une ressource ?",
+      'qcm',
+      "HEAD|GET|PATCH|OPTIONS",
+      '2',
+      "PUT remplace la ressource entière.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : accepter DELETE sans contrôle d'accès est dangereux.",
+      'tf',
+      'Vrai',
+      null,
+      "N'importe qui pourrait supprimer des ressources.",
     ]),
   ],
   exercises: [
@@ -218,9 +250,25 @@ Course _headers() => Course(
       'q1',
       'Quel en-tête force l\'utilisation de HTTPS ?',
       'qcm',
-      'Strict-Transport-Security|Content-Type|Server|Set-Cookie',
+      "Strict-Transport-Security|Access-Control-Allow-Origin|X-Content-Type-Options|Content-Disposition",
       '0',
       'HSTS force le navigateur à utiliser HTTPS.',
+    ]),
+    q(const [
+      'q2',
+      "Quel risque pose un en-tête Server trop précis ?",
+      'qcm',
+      "Révéler une version vulnérable|Ralentir les réponses du serveur|Bloquer les navigateurs|Désactiver les cookies",
+      '0',
+      "L'attaquant cherche les failles connues de cette version.",
+    ]),
+    q(const [
+      'q3',
+      "Quel en-tête limite les sources de scripts autorisées ?",
+      'qcm',
+      "Strict-Transport-Security|Content-Security-Policy|X-Content-Type-Options|Referrer-Policy",
+      '1',
+      "La CSP réduit l'impact d'une XSS.",
     ]),
   ],
   exercises: [
@@ -252,7 +300,7 @@ Course _cookies() => Course(
     ]),
     sec('Cookie de session et de suivi', [
       list(
-        '- **Session** : identifie une session authentifiée (ex: mot de passe de session).\n'
+        '- **Session** : identifie une session authentifiée (ex: un identifiant de session).\n'
         '- **Suivi** : analysis, publicité (suivre l\'utilisateur entre sites).',
       ),
     ]),
@@ -289,6 +337,22 @@ Course _cookies() => Course(
       'HttpOnly|Secure|SameSite|Expires',
       '0',
       'HttpOnly bloque l\'accès par le JavaScript.',
+    ]),
+    q(const [
+      'q2',
+      "Que garantit l'attribut Secure ?",
+      'qcm',
+      "L'invisibilité au JavaScript|Le chiffrement sur le disque|L'envoi uniquement en HTTPS|L'expiration à la fermeture",
+      '2',
+      "HttpOnly protège de JavaScript ; Secure, du transport en clair.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : SameSite aide à limiter la CSRF.",
+      'tf',
+      'Vrai',
+      null,
+      "Il restreint l'envoi du cookie depuis d'autres sites.",
     ]),
   ],
   exercises: [
@@ -355,6 +419,22 @@ Course _sessions() => Course(
       'régénérer l\'identifiant après connexion|garder la session éternelle|un identifiant court et prévisible|ignorer l\'expiration',
       '0',
       'On régénère l\'identifiant et on fait expirer la session.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce que la fixation de session ?",
+      'qcm',
+      "Imposer un identifiant avant la connexion|Voler un identifiant grâce à un script XSS|Deviner un mot de passe faible|Bloquer le compte de la victime",
+      '0',
+      "D'où la régénération de l'identifiant après connexion.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une session doit rester valide après la déconnexion.",
+      'tf',
+      'Faux',
+      null,
+      "Elle doit être invalidée côté serveur.",
     ]),
   ],
   exercises: [
@@ -427,9 +507,25 @@ Course _jwt() => Course(
       'q1',
       'Le payload d\'un JWT est...',
       'qcm',
-      'encodé en Base64URL, pas chiffré|crypté avec AES|vidé|toujours chiffré',
+      "encodé en Base64URL, pas chiffré|chiffré avec la clé du serveur (AES)|haché avec SHA-256, illisible|compressé en gzip, donc illisible",
       '0',
       'Le payload est encodé, pas chiffré : pas de secrets dedans.',
+    ]),
+    q(const [
+      'q2',
+      "Que garantit la signature d'un JWT ?",
+      'qcm',
+      "Le secret du contenu|L'anonymat du client|L'intégrité du jeton|La vitesse de l'API",
+      '2',
+      "Sans la clé, personne ne peut modifier le contenu sans être détecté.",
+    ]),
+    q(const [
+      'q3',
+      "En quoi l'attaque alg: none consiste-t-elle ?",
+      'qcm',
+      "À deviner la clé secrète du serveur|À chiffrer le jeton une seconde fois|À prolonger la durée du jeton|À faire accepter un jeton sans signature",
+      '3',
+      "Le serveur doit imposer l'algorithme attendu.",
     ]),
   ],
   exercises: [
@@ -499,6 +595,22 @@ Course _auth() => Course(
       'l\'authentification|l\'autorisation|la disponibilité|le stockage',
       '0',
       'Vérifier l\'identité = authentification.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce que l'énumération d'utilisateurs ?",
+      'qcm',
+      "Déduire quels comptes existent|Compter les connexions du jour|Créer des comptes en masse|Trier les comptes par rôle",
+      '0',
+      "Des réponses différentes trahissent l'existence d'un compte.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : être connecté donne automatiquement accès à toutes les ressources.",
+      'tf',
+      'Faux',
+      null,
+      "Authentification et autorisation sont distinctes.",
     ]),
   ],
   exercises: [
@@ -574,9 +686,25 @@ Course _api() => Course(
       'q1',
       'Une clé API doit idéalement être stockée...',
       'qcm',
-      'dans une variable d\'environnement côté serveur|dans le front-end|dans le dépôt git|dans les logs',
+      "dans une variable d'environnement côté serveur|dans le code JavaScript envoyé au navigateur|dans un fichier versionné du dépôt Git public|dans les journaux, pour la retrouver facilement",
       '0',
       'Les clés vont dans des variables d\'environnement ou un gestionnaire de secrets, jamais exposées.',
+    ]),
+    q(const [
+      'q2',
+      "Quel est le rôle du rate limiting ?",
+      'qcm',
+      "Chiffrer les réponses JSON|Valider le format des données|Limiter le nombre de requêtes|Masquer l'adresse du serveur",
+      '2',
+      "Il freine les abus et la force brute.",
+    ]),
+    q(const [
+      'q3',
+      "Qu'est-ce qu'une réponse excessive ?",
+      'qcm',
+      "Une réponse envoyée trop lentement|Une réponse trop bien compressée|Une réponse sans code de statut|Une réponse qui contient trop de champs",
+      '3',
+      "On ne renvoie que les champs nécessaires.",
     ]),
   ],
   exercises: [ex('Sécurité', 'Listez 4 failles API courantes et leur remède.')],
@@ -616,13 +744,13 @@ Course _cors() => Course(
         label: 'CORS',
       ),
       text(
-        'Si le serveur renvoie Access-Control-Allow-Origin: * (tout le monde) AVEC Allow-Credentials, ou s\'il reflète n\'importe quelle origine, alors un site malveillant peut lire les réponses et voler des données.',
+        'Si le serveur reflète n\'importe quelle origine AVEC Allow-Credentials, un site malveillant peut lire les réponses d\'un utilisateur connecté. La combinaison * et Allow-Credentials, elle, est refusée par les navigateurs : * n\'expose que ce qui est accessible sans connexion.',
       ),
     ]),
     sec('Les failles CORS', [
       list(
         '- **Reflexion de l\'origine** : le serveur renvoie l\'origine reçue sans la vérifier.\n'
-        '- **Wildcard avec credentials** : * autorisé avec cookies.\n'
+        '- **Wildcard (*)** : à réserver aux données publiques.\n'
         '- **Origines mal vérifiées** : accepter site.example vs exemple.fr.',
       ),
       text(
@@ -641,9 +769,25 @@ Course _cors() => Course(
       'q1',
       'Une origine - c\'est...',
       'qcm',
-      'protocole + domaine + port|juste le domaine|juste le port|l\'adresse MAC',
+      "protocole + domaine + port|domaine + chemin de la page|adresse IP + adresse MAC|protocole + chemin + paramètres",
       '0',
       'L\'origine combine protocole, domaine et port.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait la Same-Origin Policy ?",
+      'qcm',
+      "Empêche un site de lire les données d'un autre|Chiffre les échanges entre deux sites différents|Bloque tous les cookies tiers|Interdit les liens vers d'autres sites",
+      '0',
+      "CORS permet d'y faire des exceptions contrôlées.",
+    ]),
+    q(const [
+      'q3',
+      "Quelle configuration CORS est dangereuse ?",
+      'qcm',
+      "N'autoriser qu'une origine précise|Refléter toute origine avec les cookies|N'envoyer aucun en-tête CORS|Réserver * aux données publiques",
+      '1',
+      "Un site tiers pourrait lire les données d'un utilisateur connecté.",
     ]),
   ],
   exercises: [
@@ -676,18 +820,18 @@ Course _owaspIntro() => Course(
         'Le Top 10 est un excellent point de départ pour comprendre où concentrer ses efforts.',
       ),
     ]),
-    sec('Grandes catégories de risques', [
+    sec('Le Top 10 2025', [
       list(
-        '- **Défaillance concernant le contrôle d\'accès**.\n'
-        '- **Failles cryptographiques**.\n'
-        '- **Injection (SQL, commandes)**.\n'
-        '- **Conception non sécurisée**.\n'
-        '- **Mauvaise configuration de sécurité**.\n'
-        '- **Composants vulnérables et obsolètes**.\n'
-        '- **Échec de l\'identification et de l\'authentification**.\n'
-        '- **Problèmes d\'intégrité des logiciels et des données**.\n'
-        '- **Défaillance de surveillance et de journalisation**.\n'
-        '- **Falsification de requête côté serveur (SSRF)**.',
+        '- **A01** : défaillance du contrôle d\'accès (inclut la SSRF).\n'
+        '- **A02** : mauvaise configuration de sécurité.\n'
+        '- **A03** : défaillances de la chaîne d\'approvisionnement logicielle.\n'
+        '- **A04** : défaillances cryptographiques.\n'
+        '- **A05** : injection (SQL, commandes, XSS).\n'
+        '- **A06** : conception non sécurisée.\n'
+        '- **A07** : défaillances d\'authentification.\n'
+        '- **A08** : défaillances d\'intégrité des logiciels ou des données.\n'
+        '- **A09** : défaillances de journalisation et d\'alerte.\n'
+        '- **A10** : mauvaise gestion des conditions exceptionnelles.',
       ),
       text(
         'Pour chaque risque, on apprend : explication, exemple, impact, démonstration en lab, exercice, correction, bonnes pratiques.',
@@ -710,9 +854,25 @@ Course _owaspIntro() => Course(
       'q1',
       'L\'OWASP est...',
       'qcm',
-      'une communauté/ressource de référence sur la sécurité web|un antivirus|un serveur|un langage',
+      "une communauté/ressource de référence sur la sécurité web|un organisme public qui délivre les certificats HTTPS|un antivirus spécialisé dans l'analyse des sites web|une norme obligatoire pour héberger un site en Europe",
       '0',
       'L\'OWASP est une communauté de référence sur la sécurité applicative.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce que le Top 10 de l'OWASP ?",
+      'qcm',
+      "Un classement des meilleurs sites|Une certification obligatoire|Une liste de risques web majeurs|Un outil d'analyse automatique",
+      '2',
+      "C'est un point de départ pour prioriser ses efforts.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une mauvaise journalisation figure parmi les grands risques web.",
+      'tf',
+      'Vrai',
+      null,
+      "Sans surveillance, une attaque passe inaperçue.",
     ]),
   ],
   exercises: [
@@ -788,9 +948,25 @@ Course _owaspAccess() => Course(
       'q1',
       'Un IDOR est une faille...',
       'qcm',
-      'de contrôle d\'accès où on change un ID pour accéder à la ressource d\'un autre|de chiffrement|de réseau|de disque',
+      "où changer un ID donne accès à la ressource d'un autre|où un mot de passe trop court est deviné par force brute|où un script s'exécute dans le navigateur d'un visiteur|où le trafic est lu faute de chiffrement TLS",
       '0',
       'IDOR = Insecure Direct Object Reference : on manipule un identifiant pour un accès non autorisé.',
+    ]),
+    q(const [
+      'q2',
+      "Où faut-il vérifier les autorisations ?",
+      'qcm',
+      "Côté serveur, à chaque requête|Dans l'interface, en masquant des boutons|Une seule fois, à la connexion|Dans un champ caché du formulaire",
+      '0',
+      "Tout ce qui est côté client peut être modifié.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : cacher le bouton d'administration suffit à protéger la page.",
+      'tf',
+      'Faux',
+      null,
+      "L'adresse reste accessible à qui la connaît ou la devine.",
     ]),
   ],
   exercises: [
@@ -804,7 +980,7 @@ Course _owaspAccess() => Course(
 
 Course _owaspInjection() => Course(
   id: 'web-owasp-injection',
-  title: 'Les injections (OWASP A03)',
+  title: 'Les injections (OWASP A05)',
   category: 'web_security',
   level: 'Niveau 6 - Sécurité Web',
   levelNumber: 6,
@@ -825,7 +1001,7 @@ Course _owaspInjection() => Course(
         'Requête vulnérable :\n'
         'SELECT * FROM users WHERE user = \'\$user\' AND pass = \'\$pass\'\n'
         '\n'
-        'Entrée malveillante : user = \'admin\' --   \n'
+        'Entrée malveillante : admin\' -- \n'
         'Résultat : SELECT * FROM users WHERE user = \'admin\' --...\n'
         '           (le -- commente le reste → contourne le mot de passe)',
         label: 'SQLi',
@@ -879,6 +1055,22 @@ Course _owaspInjection() => Course(
       '0',
       'Les requêtes paramétrées empêchent l\'interprétation de l\'entrée comme code.',
     ]),
+    q(const [
+      'q2',
+      "Que permet souvent -- dans une injection SQL ?",
+      'qcm',
+      "De chiffrer le mot de passe saisi|De créer une nouvelle table|De commenter la suite de la requête|De fermer la connexion à la base",
+      '2',
+      "La vérification du mot de passe est alors ignorée.",
+    ]),
+    q(const [
+      'q3',
+      "Pourquoi ne pas afficher les erreurs SQL brutes ?",
+      'qcm',
+      "Elles ralentissent la base|Elles bloquent les visiteurs|Elles coûtent de l'espace|Elles renseignent l'attaquant",
+      '3',
+      "Elles révèlent la structure de la base et des requêtes.",
+    ]),
   ],
   exercises: [
     ex(
@@ -891,7 +1083,7 @@ Course _owaspInjection() => Course(
 
 // ---------------------------------------------------------------------------
 // Familles OWASP complémentaires. La numérotation citée est celle de
-// l'édition 2021 du Top 10 ; le classement est révisé régulièrement, mais les
+// l'édition 2025 du Top 10 ; le classement est révisé régulièrement, mais les
 // familles de failles restent.
 // ---------------------------------------------------------------------------
 
@@ -906,15 +1098,15 @@ Course _xss() => Course(
     "Savoir ce qu'un attaquant peut faire avec une XSS",
     "Appliquer l'encodage en sortie et la CSP",
   ],
-  prerequisites: ["Les injections (OWASP A03)", "Les cookies"],
+  prerequisites: ["Les injections (OWASP A05)", "Les cookies"],
   sections: [
     sec("Le principe", [
       text(
         "Une XSS survient quand une application insère dans sa page une "
         "donnée fournie par l'utilisateur sans la neutraliser. Le navigateur "
         "de la victime exécute alors le script de l'attaquant, avec les "
-        "droits du site. Dans le Top 10 2021, la XSS fait partie de la "
-        "famille des injections.",
+        "droits du site. Dans le Top 10 2025, la XSS fait partie de la "
+        "famille des injections (A05).",
       ),
       code(
         "https://site.example/recherche?q=<script>alert(1)</script>",
@@ -968,7 +1160,7 @@ Course _xss() => Course(
       'q2',
       "Quelle est la défense principale contre la XSS ?",
       'qcm',
-      "Encoder les données en sortie selon le contexte|Chiffrer la base de données|Utiliser POST au lieu de GET|Changer le port du serveur",
+      "Encoder les données en sortie selon le contexte|Chiffrer les données enregistrées dans la base|Utiliser POST au lieu de GET dans les formulaires|Limiter la longueur des champs à cent caractères",
       '0',
       "Les caractères spéciaux deviennent du texte inoffensif.",
     ]),
@@ -1022,9 +1214,9 @@ Course _csrf() => Course(
     sec("Se protéger", [
       list(
         "- **Jeton anti-CSRF** : une valeur imprévisible liée à la session, exigée dans chaque formulaire ; la page piégée ne peut pas la connaître.\n"
-        "- **SameSite=Lax ou Strict** sur le cookie de session : il n'est plus envoyé par les requêtes provenant d'autres sites.\n"
+        "- **SameSite=Lax ou Strict** sur le cookie de session : un formulaire POST piégé sur un autre site part sans lui. Lax l'envoie encore quand on suit un lien (GET) ; Strict ne l'envoie jamais depuis un autre site.\n"
         "- Redemander le mot de passe pour les actions sensibles.\n"
-        "- Ne jamais modifier de données avec GET.",
+        "- Ne jamais modifier de données avec GET (SameSite=Lax ne le protège pas).",
       ),
     ]),
   ],
@@ -1041,7 +1233,7 @@ Course _csrf() => Course(
       'q1',
       "Sur quoi repose une attaque CSRF ?",
       'qcm',
-      "Le navigateur joint automatiquement le cookie de session|Une faille du chiffrement TLS|Un mot de passe faible|Un serveur DNS piraté",
+      "Le navigateur joint automatiquement le cookie de session|Le serveur affiche un script fourni par l'utilisateur|Le mot de passe de la victime est trop facile à deviner|Le certificat TLS du site est expiré ou auto-signé",
       '0',
       "La requête forgée part du navigateur de la victime, avec ses cookies.",
     ]),
@@ -1051,7 +1243,7 @@ Course _csrf() => Course(
       'qcm',
       "SameSite|Path|Expires|Domain",
       '0',
-      "SameSite empêche l'envoi du cookie depuis d'autres sites.",
+      "Strict n'envoie jamais le cookie depuis un autre site ; Lax ne l'envoie qu'en suivant un lien (GET).",
     ]),
     q(const [
       'q3',
@@ -1091,8 +1283,9 @@ Course _ssrf() => Course(
         "Certaines fonctions récupèrent une URL fournie par l'utilisateur "
         "(aperçu de lien, import d'image, webhook). Si le serveur accepte "
         "n'importe quelle adresse, l'attaquant lui fait interroger des "
-        "ressources internes inaccessibles depuis Internet. SSRF est la "
-        "catégorie A10 du Top 10 2021.",
+        "ressources internes inaccessibles depuis Internet. Catégorie "
+        "A10 du Top 10 2021, la SSRF est rattachée en 2025 au contrôle "
+        "d'accès (A01).",
       ),
       code(
         "POST /apercu  url=http://192.168.56.10/admin\n"
@@ -1111,13 +1304,13 @@ Course _ssrf() => Course(
     sec("Se protéger", [
       list(
         "- **Liste d'autorisation** des domaines ou adresses joignables, plutôt qu'une liste de refus.\n"
-        "- Résoudre le nom puis refuser les adresses privées, de boucle locale et lien-local.\n"
+        "- Résoudre le nom puis refuser les adresses privées, de boucle locale et lien-local, puis se connecter à l'adresse vérifiée (sinon le nom peut changer entre-temps).\n"
         "- Désactiver les redirections automatiques ou revérifier chaque destination.\n"
         "- Filtrer le trafic sortant du serveur.\n"
         "- Utiliser la version protégée du service de métadonnées (IMDSv2 chez AWS).",
       ),
       tip(
-        "CyberLab applique lui-même ce principe pour le coach : en HTTP, un "
+        "CyberLab vérifie lui aussi l'adresse réelle pour le coach : en HTTP, un "
         "nom .local est résolu et refusé s'il pointe vers une adresse "
         "publique.",
       ),
@@ -1136,7 +1329,7 @@ Course _ssrf() => Course(
       'q1',
       "Quelle fonction est typiquement exposée à la SSRF ?",
       'qcm',
-      "Un aperçu de lien qui récupère une URL fournie|Un formulaire de contact|Un menu déroulant|Une page statique",
+      "Un aperçu de lien qui récupère une URL fournie|Un formulaire de contact qui envoie un e-mail|Un menu déroulant qui liste les pays disponibles|Une page statique servie par un CDN",
       '0',
       "Le serveur va chercher une adresse choisie par l'utilisateur.",
     ]),
@@ -1144,7 +1337,7 @@ Course _ssrf() => Course(
       'q2',
       "Pourquoi l'adresse 169.254.169.254 est-elle une cible prisée ?",
       'qcm',
-      "C'est le service de métadonnées de nombreux clouds|C'est le DNS de Google|C'est l'adresse du routeur domestique|C'est une adresse de diffusion",
+      "C'est le service de métadonnées de nombreux clouds|C'est le serveur DNS public de plusieurs opérateurs|C'est l'adresse par défaut des routeurs domestiques|C'est l'adresse de diffusion du réseau local",
       '0',
       "Il peut fournir des identifiants temporaires de la machine.",
     ]),
@@ -1227,7 +1420,7 @@ Course _upload() => Course(
       'q1',
       "Qu'est-ce qu'un web shell ?",
       'qcm',
-      "Un script déposé sur le serveur qui exécute des commandes via le navigateur|Un navigateur sécurisé|Un pare-feu applicatif|Un certificat",
+      "Un script déposé sur le serveur qui exécute des commandes|Un navigateur en ligne de commande pour tester un site|Un pare-feu applicatif qui filtre les requêtes HTTP|Une console d'administration fournie par l'hébergeur",
       '0',
       "Il donne à l'attaquant une console sur le serveur.",
     ]),
@@ -1243,7 +1436,7 @@ Course _upload() => Course(
       'q3',
       "Où stocker les fichiers téléversés ?",
       'qcm',
-      "Hors de la racine du site, sans droit d'exécution|Dans le dossier principal du site|Dans /etc|Dans le dossier des scripts",
+      "Hors de la racine du site, sans droit d'exécution|Dans le dossier des scripts, avec droit d'exécution|À la racine du site, sous leur nom d'origine|Dans /etc, avec les fichiers de configuration du serveur",
       '0',
       "Ils ne doivent jamais pouvoir être exécutés par le serveur web.",
     ]),
@@ -1281,7 +1474,7 @@ Course _misconfig() => Course(
         "- En-têtes de sécurité absents.",
       ),
       text(
-        "La mauvaise configuration est la catégorie A05 du Top 10 2021 : "
+        "La mauvaise configuration est la catégorie A02 du Top 10 2025 : "
         "aucune ligne de code n'est fautive, mais le réglage expose tout.",
       ),
     ]),
@@ -1322,7 +1515,7 @@ Course _misconfig() => Course(
       'q1',
       "Pourquoi le mode débogage est-il dangereux en production ?",
       'qcm',
-      "Il révèle des détails internes (code, chemins, requêtes)|Il ralentit l'affichage des images|Il désactive HTTPS|Il supprime les journaux",
+      "Il révèle des détails internes (code, chemins, requêtes)|Il ralentit le chargement des images et des scripts|Il désactive le chiffrement TLS entre client et serveur|Il supprime les journaux à chaque redémarrage du serveur",
       '0',
       "Les traces d'erreur détaillées aident l'attaquant à comprendre l'application.",
     ]),
@@ -1330,7 +1523,7 @@ Course _misconfig() => Course(
       'q2',
       "Quel en-tête impose HTTPS au navigateur pour les visites suivantes ?",
       'qcm',
-      "Strict-Transport-Security|X-Powered-By|Server|Accept",
+      "Strict-Transport-Security|X-Content-Type-Options|Access-Control-Allow-Origin|Cross-Origin-Resource-Policy",
       '0',
       "C'est HSTS.",
     ]),
@@ -1369,8 +1562,9 @@ Course _components() => Course(
       text(
         "Une application moderne embarque des centaines de bibliothèques. "
         "Une faille dans l'une d'elles devient une faille de l'application. "
-        "C'est la catégorie A06 du Top 10 2021 (composants vulnérables et "
-        "obsolètes).",
+        "C'est la catégorie A03 du Top 10 2025 (défaillances de la chaîne "
+        "d'approvisionnement logicielle), qui élargit l'ancienne A06 de 2021 "
+        "(composants vulnérables et obsolètes).",
       ),
       text(
         "Exemple marquant : Log4Shell (CVE-2021-44228, fin 2021), une faille "
@@ -1415,7 +1609,7 @@ Course _components() => Course(
       'q1',
       "Qu'est-ce qu'une SBOM ?",
       'qcm',
-      "L'inventaire des composants logiciels d'une application|Un type de pare-feu|Un algorithme de chiffrement|Un format d'image",
+      "L'inventaire des composants logiciels d'une application|La liste des utilisateurs autorisés d'une application|Un algorithme qui chiffre les dépendances d'un projet|Un test d'intrusion mené avant la mise en production",
       '0',
       "Software Bill of Materials : la liste des composants et de leurs versions.",
     ]),
@@ -1423,7 +1617,7 @@ Course _components() => Course(
       'q2',
       "Le typosquatting consiste à...",
       'qcm',
-      "Publier un paquet au nom presque identique à un paquet connu|Taper un mot de passe trop vite|Saturer un serveur|Chiffrer des fichiers",
+      "Publier un paquet au nom presque identique à un paquet connu|Deviner un mot de passe en testant des fautes de frappe|Modifier le code d'un paquet connu sur le serveur officiel|Envoyer un très grand nombre de requêtes à un dépôt",
       '0',
       "Une faute de frappe à l'installation suffit à installer le paquet piégé.",
     ]),

@@ -92,7 +92,7 @@ Course _term() => Course(
       'q1',
       'Qu\'est-ce que le shell ?',
       'qcm',
-      'une coquille d\'escargot|le programme qui interprète vos commandes|un antivirus|un navigateur',
+      "la fenêtre graphique qui affiche le bureau|le programme qui interprète vos commandes|le noyau qui pilote le matériel de la machine|le dossier qui contient vos fichiers personnels",
       '1',
       'Le shell interprète et exécute vos commandes. Sous Linux, c\'est souvent Bash.',
     ]),
@@ -100,7 +100,7 @@ Course _term() => Course(
       'q2',
       'La commande "pwd" affiche...',
       'qcm',
-      'le mot de passe|le répertoire de travail courant|le processeur|les périphériques',
+      "le mot de passe de l'utilisateur courant|le répertoire de travail courant|la liste des processus en cours|le nom de la machine et du réseau",
       '1',
       'pwd = "print working directory", affiche où vous êtes.',
     ]),
@@ -198,7 +198,7 @@ Course _fs() => Course(
       'q1',
       'La racine du système de fichiers Linux est...',
       'qcm',
-      'C:/|/|\\|deux points',
+      'C:/|/|/root|/home',
       '1',
       'Tout part de la racine "/".',
     ]),
@@ -222,7 +222,7 @@ Course _fs() => Course(
       'q4',
       'Quel chemin est absolu ?',
       'qcm',
-      '../logs|logs|/home/learner/logs|documents/',
+      "../learner/logs|home/learner/logs|/home/learner/logs|./documents/logs",
       '2',
       'Un chemin absolu commence par /. Les autres sont relatifs.',
     ]),
@@ -230,7 +230,7 @@ Course _fs() => Course(
   exercises: [
     ex(
       'Explorer l\'arborescence',
-      'Dans le terminal simulé, tapez "ls", puis "tree" pour visualiser la structure. Identifiez /etc, /var, /home.',
+      'Dans le terminal simulé, tapez "ls /" et identifiez /etc, /var et /home, puis "tree" pour visualiser votre dossier personnel.',
     ),
   ],
   xp: 100,
@@ -255,7 +255,7 @@ Course _navigation() => Course(
         'ls         # liste le contenu du dossier\n'
         'ls -l      # liste détaillée (permissions, taille, date)\n'
         'ls -a      # inclut les fichiers cachés\n'
-        'ls -h      # tailles lisibles (Ko, Mo)\n'
+        'ls -lh     # liste détaillée, tailles lisibles (Ko, Mo)\n'
         'cd dossier # entre dans un dossier\n'
         'cd ..      # remonte d\'un niveau\n'
         'cd ~       # va dans votre dossier personnel',
@@ -280,7 +280,7 @@ Course _navigation() => Course(
         label: 'Manipulation',
       ),
       warn(
-        'Attention à "rm -rf /" : cela détruit tout le système (r = récursif, f = forcer). C\'est l\'exemple type de commande destructrice. Ne l\'utilisez JAMAIS hors laboratoire.',
+        'Attention à "rm -rf /" : cela demande d\'effacer tout le système (r = récursif, f = forcer). Le rm de GNU refuse ce cas précis sans --no-preserve-root, mais pas "rm -rf /*". C\'est l\'exemple type de commande destructrice. Ne l\'utilisez JAMAIS hors laboratoire.',
       ),
     ]),
     sec('Les jokers (wildcards) avec * et ?', [
@@ -334,7 +334,7 @@ Course _navigation() => Course(
       'q3',
       'Un fichier dont le nom est "log?.txt" correspond à...',
       'qcm',
-      'log.txt exclusivement|un fichier avec 1 caractère entre log et txt (ex log1.txt)|n\'importe quel fichier|logAAA.txt',
+      "le fichier log.txt, avec ou sans caractère entre les deux|un fichier avec 1 caractère entre log et .txt (ex log1.txt)|tous les fichiers dont le nom commence par log (ex logAAA.txt)|uniquement un fichier dont le nom contient un point d'interrogation",
       '1',
       'Le ? remplace exactement un caractère.',
     ]),
@@ -350,7 +350,7 @@ Course _navigation() => Course(
   exercises: [
     ex(
       'Pratique',
-      'Dans le terminal simulé, "touch log1.txt", "mkdir scripts", "ls -l", "cp log1.txt scripts/", "mv scripts/log1.txt notes.txt". Observez chaque sortie.',
+      'Dans le terminal simulé, "touch log1.txt", "mkdir essai", "ls -l", "cp log1.txt essai/", "mv essai/log1.txt essai/copie.txt", "ls essai". Observez chaque sortie.',
     ),
   ],
   xp: 100,
@@ -432,6 +432,14 @@ Course _users() => Course(
       null,
       'On évite root au quotidien, on utilise sudo ponctuellement.',
     ]),
+    q(const [
+      'q3',
+      "Que fait sudo userdel -r alice ?",
+      'qcm',
+      "Supprime alice et son dossier personnel|Supprime seulement le mot de passe d'alice|Renomme le compte alice|Retire alice du groupe sudo",
+      '0',
+      "-r (remove) efface aussi /home/alice.",
+    ]),
   ],
   exercises: [
     ex(
@@ -493,9 +501,25 @@ Course _groups() => Course(
       'q1',
       'Quelle commande ajoute un utilisateur à un groupe ?',
       'qcm',
-      'groupdel|usermod -aG groupe user|userdel|passwd',
+      "groupdel -a groupe user|usermod -aG groupe user|useradd --home groupe user|passwd -g groupe user",
       '1',
       'usermod -aG ajoute (a=append) au groupe.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait l'option -a dans usermod -aG devs alice ?",
+      'qcm',
+      "Elle applique le changement à tous|Elle active le compte de l'utilisateur|Elle ajoute sans retirer les autres groupes|Elle donne les droits administrateur",
+      '2',
+      "Sans -a, la liste des groupes secondaires serait remplacée.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un fichier créé appartient au groupe principal de son créateur.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est le comportement par défaut.",
     ]),
   ],
   exercises: [
@@ -579,7 +603,7 @@ Course _permissions() => Course(
       'q1',
       'Dans "-rwxr--r--", le propriétaire peut...',
       'qcm',
-      'lire, écrire, exécuter|lire seulement|écrire seulement|rien',
+      "lire, écrire, exécuter|lire et écrire seulement|lire et exécuter seulement|écrire et exécuter seulement",
       '0',
       'rwx avant le premier - : le propriétaire lit, écrit, exécute.',
     ]),
@@ -590,6 +614,14 @@ Course _permissions() => Course(
       'Vrai',
       null,
       'Pour un dossier, x = pouvoir naviguer dedans (cd).',
+    ]),
+    q(const [
+      'q3',
+      "Que permet le droit w sur un dossier ?",
+      'qcm',
+      "Entrer dans le dossier avec cd|Créer et supprimer des fichiers dedans|Lister les fichiers qu'il contient|Exécuter les programmes qu'il contient",
+      '1',
+      "r liste, w modifie le contenu, x permet d'entrer.",
     ]),
   ],
   exercises: [
@@ -675,7 +707,7 @@ Course _chmod() => Course(
       'q1',
       'chmod 600 donne...',
       'qcm',
-      'lecture+écriture au propriétaire seulement|tout à tous|lecture à tous|exécution à tous',
+      "lecture+écriture au propriétaire seulement|lecture et écriture au propriétaire et au groupe|lecture à tous, écriture au propriétaire|lecture, écriture et exécution au propriétaire",
       '0',
       '600 = rw------- : propriétaire lit+écrit, rien pour les autres.',
     ]),
@@ -763,6 +795,22 @@ Course _chown() => Course(
       '1',
       'Changer le propriétaire est une opération privilégiée (sudo).',
     ]),
+    q(const [
+      'q2',
+      "Que fait sudo chown :devs fichier.txt ?",
+      'qcm',
+      "Change seulement le groupe|Change seulement le propriétaire|Supprime le propriétaire|Donne tous les droits à devs",
+      '0',
+      "Rien devant les deux-points : le propriétaire ne change pas.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : chown modifie les droits rwx d'un fichier.",
+      'tf',
+      'Faux',
+      null,
+      "chown change le propriétaire ou le groupe ; chmod change les droits.",
+    ]),
   ],
   exercises: [
     ex(
@@ -829,9 +877,25 @@ Course _sudo() => Course(
       'q1',
       'sudo permet de...',
       'qcm',
-      'exécuter une commande avec privilèges élevés ponctuellement|naviguer sur internet|crypter des fichiers à coup sûr|éviter les antivirus',
+      "exécuter une commande avec privilèges élevés ponctuellement|ouvrir une session graphique en tant qu'un autre utilisateur|supprimer définitivement le mot de passe de root|chiffrer automatiquement les fichiers de configuration",
       '0',
       'sudo élève ponctuellement les privilèges pour une commande.',
+    ]),
+    q(const [
+      'q2',
+      "Quelle commande liste vos droits sudo ?",
+      'qcm',
+      "sudo -u|su -c|sudo -l|id -s",
+      '2',
+      "Elle est aussi le premier réflexe d'un audit d'élévation de privilèges.",
+    ]),
+    q(const [
+      'q3',
+      "Dans quel fichier définit-on qui peut utiliser sudo ?",
+      'qcm',
+      "/etc/shadow|/etc/hosts|/etc/crontab|/etc/sudoers",
+      '3',
+      "On le modifie avec précaution, car une erreur peut bloquer sudo.",
     ]),
   ],
   exercises: [
@@ -918,6 +982,14 @@ Course _processes() => Course(
       '0',
       'ps aux liste tous les processus.',
     ]),
+    q(const [
+      'q3',
+      "Pourquoi essayer kill avant kill -9 ?",
+      'qcm',
+      "kill est réservé à l'administrateur|kill -9 ne fonctionne pas sur les services|Le processus peut s'arrêter proprement|kill supprime aussi le programme du disque",
+      '2',
+      "SIGTERM laisse le temps de sauvegarder ; SIGKILL est brutal.",
+    ]),
   ],
   exercises: [
     ex(
@@ -992,7 +1064,7 @@ Course _services() => Course(
       'q1',
       'Quel commande affiche l\'état d\'un service ?',
       'qcm',
-      'sudo systemctl status <service>|date|pwd|ls',
+      "sudo systemctl status <service>|sudo systemctl enable <service>|sudo systemctl start <service>|sudo journalctl --vacuum-time=7d",
       '0',
       'systemctl status montre l\'état du service.',
     ]),
@@ -1003,6 +1075,14 @@ Course _services() => Course(
       'Faux',
       null,
       'Un service peut être local ou interne sans port réseau exposé.',
+    ]),
+    q(const [
+      'q3',
+      "Que fait systemctl disable ssh ?",
+      'qcm',
+      "Le service s'arrête immédiatement|Le service est désinstallé du système|Le service change de port d'écoute|Le service ne démarrera plus au boot",
+      '3',
+      "disable agit au prochain démarrage ; stop arrête tout de suite.",
     ]),
   ],
   exercises: [
@@ -1098,6 +1178,14 @@ Course _systemd() => Course(
       null,
       'enable configure le service pour démarrer au boot.',
     ]),
+    q(const [
+      'q3',
+      "Que fait journalctl -u ssh -f ?",
+      'qcm',
+      "Suit en direct les journaux de ssh|Efface les journaux de ssh|Affiche seulement les erreurs de ssh|Force le redémarrage de ssh",
+      '0',
+      "-u choisit l'unité, -f suit en continu (follow).",
+    ]),
   ],
   exercises: [
     ex(
@@ -1190,7 +1278,7 @@ Course _logs() => Course(
       'q2',
       'Quelle commande cherche les échecs de connexion ?',
       'qcm',
-      'grep "Failed password" /var/log/auth.log|ls /var|cd /|pwd',
+      'grep "Failed password" /var/log/auth.log|grep "Accepted password" /var/log/auth.log|tail -n 20 /var/log/dpkg.log|find /var/log -name "failed"',
       '0',
       'grep filtre les lignes contenant "Failed password" dans auth.log.',
     ]),
@@ -1283,6 +1371,22 @@ Course _network() => Course(
       '0',
       'ip addr affiche les adresses IP des interfaces.',
     ]),
+    q(const [
+      'q2',
+      "ping 8.8.8.8 répond, mais ping google.com échoue. Quelle est la piste ?",
+      'qcm',
+      "La résolution DNS|Le câble réseau|La passerelle|La carte Wi-Fi",
+      '0',
+      "L'accès IP fonctionne : c'est la traduction du nom qui échoue.",
+    ]),
+    q(const [
+      'q3',
+      "Quelle commande affiche la passerelle par défaut ?",
+      'qcm',
+      "ip link|ip route|ss -tlnp|hostname",
+      '1',
+      "La ligne « default via » indique la passerelle.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1359,6 +1463,22 @@ Course _packages() => Course(
       'sudo apt update|sudo apt remove|sudo apt search|pwd',
       '0',
       'apt update actualise la liste des paquets disponibles.',
+    ]),
+    q(const [
+      'q2',
+      "Pourquoi lancer apt update avant apt install ?",
+      'qcm',
+      "Pour supprimer les anciens paquets|Pour redémarrer les services actifs|Pour avoir une liste de paquets à jour|Pour vérifier l'espace disque libre",
+      '2',
+      "update rafraîchit la liste ; upgrade met à jour les logiciels.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : installer un .deb trouvé sur un site inconnu est aussi sûr qu'un paquet du dépôt officiel.",
+      'tf',
+      'Faux',
+      null,
+      "Un paquet de source douteuse peut être piégé.",
     ]),
   ],
   exercises: [
@@ -1438,6 +1558,22 @@ Course _variables() => Course(
       '0',
       'Le \$ est nécessaire pour lire la valeur.',
     ]),
+    q(const [
+      'q2',
+      "À quoi sert export ?",
+      'qcm',
+      "Transmettre la variable aux programmes lancés|Enregistrer la variable pour le prochain démarrage|Rendre la variable en lecture seule|Afficher la valeur de la variable",
+      '0',
+      "Une variable non exportée reste dans le shell courant.",
+    ]),
+    q(const [
+      'q3',
+      "Pourquoi un dossier modifiable par tous dans PATH est-il dangereux ?",
+      'qcm',
+      "Il ralentit le démarrage du système|On peut y placer une fausse commande|Il empêche les mises à jour apt|Il efface l'historique du shell",
+      '1',
+      "Le shell pourrait exécuter un faux « ls » à la place du vrai.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1515,7 +1651,7 @@ Course _pipes() => Course(
       'q1',
       'Le symbole | sert à...',
       'qcm',
-      'passer la sortie d\'une commande en entrée à la suivante|rediriger vers un fichier|commenter|multiplier',
+      "passer la sortie d'une commande en entrée à la suivante|enregistrer la sortie d'une commande dans un fichier|lancer la seconde commande seulement si la première échoue|exécuter les deux commandes l'une après l'autre sans lien",
       '0',
       'Le pipe enchaîne les commandes.',
     ]),
@@ -1523,9 +1659,17 @@ Course _pipes() => Course(
       'q2',
       'La commande "ls > liste.txt"...',
       'qcm',
-      'écrit la sortie de ls dans liste.txt|lit liste.txt|supprime liste.txt|affiche liste.txt',
+      "écrit la sortie de ls dans liste.txt|ajoute la sortie de ls à la fin de liste.txt|affiche le contenu de liste.txt puis ls|donne liste.txt en entrée à ls",
       '0',
       '> redirige la sortie vers le fichier.',
+    ]),
+    q(const [
+      'q3',
+      "Que fait ls 2> erreurs.txt ?",
+      'qcm',
+      "Écrit deux fois la sortie normale|Écrit les erreurs dans le fichier|Lit les erreurs du fichier|Fait ignorer toutes les erreurs",
+      '1',
+      "2 désigne la sortie d'erreur.",
     ]),
   ],
   exercises: [
@@ -1601,7 +1745,7 @@ Course _grep() => Course(
       'q1',
       'grep -v "test" fichier affiche...',
       'qcm',
-      'les lignes ne contenant pas "test"|les lignes avec "test"|tout le fichier|rien',
+      'les lignes ne contenant pas "test"|les lignes contenant le mot "test"|le nombre de lignes contenant "test"|les lignes numérotées contenant "test"',
       '0',
       '-v inverse : affiche les lignes SANS le motif.',
     ]),
@@ -1612,6 +1756,14 @@ Course _grep() => Course(
       '-i|-v|-n|-c',
       '0',
       '-i ignore la casse (insensitive).',
+    ]),
+    q(const [
+      'q3',
+      "Que trouve grep \"^Aug\" log.txt ?",
+      'qcm',
+      "Les lignes qui finissent par Aug|Les lignes qui ne contiennent pas Aug|Les lignes qui commencent par Aug|Le nombre de lignes contenant Aug",
+      '2',
+      "^ marque le début de ligne, \$ la fin.",
     ]),
   ],
   exercises: [
@@ -1689,6 +1841,22 @@ Course _find() => Course(
       'find . -type d|find . -type f|ls -d|grep d',
       '0',
       '-type d recherche les dossiers (directory).',
+    ]),
+    q(const [
+      'q2',
+      "Que cherche find / -perm -4000 -type f ?",
+      'qcm',
+      "Les fichiers de 4000 octets|Les fichiers cachés|Les fichiers setuid|Les dossiers partagés",
+      '2',
+      "Un setuid s'exécute avec les droits de son propriétaire : à auditer.",
+    ]),
+    q(const [
+      'q3',
+      "Dans find ... -exec ls -l {} \\;, que représente {} ?",
+      'qcm',
+      "Le dossier courant|La fin de la commande|Un fichier vide|Le fichier trouvé",
+      '3',
+      "find remplace {} par chaque résultat.",
     ]),
   ],
   exercises: [
@@ -1769,6 +1937,22 @@ Course _curl() => Course(
       '-I|-o|-X|-d',
       '0',
       '-I envoie une requête HEAD et affiche les en-têtes.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait curl -o page.html https://site.com ?",
+      'qcm',
+      "Enregistre la réponse dans page.html|Envoie le fichier page.html au serveur|Affiche uniquement les en-têtes|Télécharge tous les liens du site",
+      '0',
+      "-o (output) écrit la réponse dans un fichier.",
+    ]),
+    q(const [
+      'q3',
+      "Quelle option de wget reprend un téléchargement interrompu ?",
+      'qcm',
+      "-r|-c|-l|-q",
+      '1',
+      "-c pour continue ; -r télécharge récursivement.",
     ]),
   ],
   exercises: [
@@ -1858,6 +2042,14 @@ Course _ssh() => Course(
       'Vrai',
       null,
       'SSH chiffre toute la session, contrairement à telnet.',
+    ]),
+    q(const [
+      'q3',
+      "Que copie ssh-copy-id sur le serveur ?",
+      'qcm',
+      "La clé privée|Le mot de passe|L'empreinte du serveur|La clé publique",
+      '3',
+      "La clé privée ne quitte jamais votre machine.",
     ]),
   ],
   exercises: [

@@ -61,9 +61,9 @@ Course _intro() => Course(
         'Aujourd\'hui, presque tout est connecté : banques, santé, transports, énergie. Une cyberattaque peut donc avoir des conséquences bien réelles sur le monde physique.',
       ),
       list(
-        '- Le coût mondial de la cybercriminalité se compte en milliers de milliards par an.\n'
-        '- 90% des attaques réussies commencent par une erreur humaine (phishing).\n'
-        '- La majorité des incidents pourraient être évités par de bonnes pratiques de base.',
+        '- Les cyberattaques coûtent chaque année des sommes considérables aux particuliers, aux entreprises et aux États.\n'
+        '- Beaucoup d\'attaques réussies commencent par une erreur humaine (phishing).\n'
+        '- De bonnes pratiques de base (mises à jour, mots de passe uniques, 2FA, sauvegardes) évitent beaucoup d\'incidents.',
       ),
     ]),
     sec('Apprentissage, test autorisé, attaque illégale', [
@@ -80,7 +80,7 @@ Course _intro() => Course(
     sec('Erreurs fréquentes', [
       text(
         '- Croire que la cybersécurité = anti-virus (c\'est bien plus large).\n'
-        '- Penser que seuls les grandes entreprises sont ciblées.\n'
+        '- Penser que seules les grandes entreprises sont ciblées.\n'
         '- Oublier que le facteur humain est la plus grande faille.',
       ),
     ]),
@@ -97,15 +97,15 @@ Course _intro() => Course(
       'q1',
       'Quels sont les trois piliers de la sécurité de l\'information ?',
       'qcm',
-      'Confidentialité, Intégrité, Disponibilité|Vitesse, Mémoire, Processeur|SHA, AES, RSA|Clavier, souris, écran',
+      "Confidentialité, Intégrité, Disponibilité|Confidentialité, Rapidité, Compatibilité|Prévention, Détection, Restauration|Authentification, Chiffrement, Sauvegarde des données",
       '0',
-      'Les trois piliers (CIA) sont la Confidentialité, l\'Intégrité et la Disponibilité. SHA/AES/RSA sont des outils cryptographiques, pas des piliers.',
+      'Les trois piliers (CIA) sont la Confidentialité, l\'Intégrité et la Disponibilité. La sauvegarde ou le chiffrement sont des moyens au service de ces piliers.',
     ]),
     q(const [
       'q2',
       'Une attaque illégale consiste à...',
       'qcm',
-      'tester son propre système|apprendre en pratique|attaquer un système tiers sans autorisation|utiliser un antivirus',
+      "tester son propre système avec des outils offensifs|s'entraîner sur une machine de lab volontairement vulnérable|attaquer un système tiers sans autorisation|signaler une faille à l'éditeur du logiciel concerné",
       '2',
       'Attaquer un système qui ne vous appartient pas, sans autorisation, est un délit. Les autres options sont légitimes.',
     ]),
@@ -172,7 +172,7 @@ Course _hackerEthique() => Course(
       list(
         '- **Chapeau blanc (white hat)** : éthique, avec autorisation, aide à sécuriser. Le hacker éthique.\n'
         '- **Chapeau gris (grey hat)** : peut explorer sans autorisation formelle mais sans intention nuisible. Zone grise légalement.\n'
-        '- **Chapeau noir (black hat)** : malveillant, agit sans autorisation, motive par le gain ou le vandalisme. Illégal.',
+        '- **Chapeau noir (black hat)** : malveillant, agit sans autorisation, motivé par le gain ou le vandalisme. Illégal.',
       ),
       warn(
         'Dans ce cours, nous visons exclusivement le chapeau blanc. Toute pratique offensive doit se faire dans un environnement autorisé.',
@@ -199,7 +199,7 @@ Course _hackerEthique() => Course(
         '- **Reporting** : communiquer les résultats de manière professionnelle.',
       ),
       warn(
-        'Même le "hacker les plus compétents" peuvent être poursuivis s\'ils agissent sans autorisation. La compétence ne justifie jamais l\'intrusion illégale.',
+        'Même les personnes les plus compétentes peuvent être poursuivis s\'ils agissent sans autorisation. La compétence ne justifie jamais l\'intrusion illégale.',
       ),
     ]),
   ],
@@ -215,7 +215,7 @@ Course _hackerEthique() => Course(
       'q1',
       'Un "white hat" est un hacker qui...',
       'qcm',
-      'attaque sans autorisation|aide à sécuriser avec autorisation|vend des données volées|crée des virus pour tester',
+      "attaque sans autorisation mais sans nuire|aide à sécuriser avec autorisation|revend les failles au plus offrant|crée des virus pour tester les antivirus",
       '1',
       'Le white hat est le hacker éthique : il protège, avec un cadre autorisé.',
     ]),
@@ -223,7 +223,7 @@ Course _hackerEthique() => Course(
       'q2',
       'La première condition avant un pentest est...',
       'qcm',
-      'avoir beaucoup de compétences|avoir l\'autorisation écrite du propriétaire|posséder de bons outils|être anonyme',
+      "connaître parfaitement la cible à l'avance|avoir l'autorisation écrite du propriétaire|disposer d'outils reconnus et à jour|rester anonyme pendant toute la durée du test",
       '1',
       'L\'autorisation écrite et le périmètre défini sont indispensables, avant les compétences et les outils.',
     ]),
@@ -239,7 +239,7 @@ Course _hackerEthique() => Course(
       'q4',
       'Un hacker "grey hat"...',
       'qcm',
-      'est toujours légal|peut explorer sans autorisation formelle, zone grise|est toujours malveillant|ne connaît pas l\'informatique',
+      "agit toujours dans un cadre contractuel signé|peut explorer sans autorisation formelle, zone grise|cherche toujours à nuire ou à s'enrichir illégalement|travaille exclusivement à la défense d'une entreprise",
       '1',
       'Le grey hat agit dans une zone grise juridique : sans autorisation formelle mais sans intention de nuire.',
     ]),
@@ -296,12 +296,12 @@ Course _cybercriminalite() => Course(
         'Une cyberattaque peut causer des pertes financières, la fuite de données sensibles, l\'atteinte à la réputation, et dans certains cas des impacts physiques (hôpitaux, infrastructures).',
       ),
       warn(
-        'Comprendre la cybercriminalité ne veut pas dire la pratiquer. Écrire du code malveillant, même "pour voir", est illégal et dangereux.',
+        'Comprendre la cybercriminalité ne veut pas dire la pratiquer. En France, détenir ou diffuser sans motif légitime (recherche, sécurité) un programme conçu pour attaquer est puni par la loi (article 323-3-1 du Code pénal), et l\'utiliser contre autrui l\'est toujours.',
       ),
     ]),
     sec('Comment se protéger', [
       list(
-        '- Mots de passe forts et uniques, géré par un gestionnaire.\n'
+        '- Mots de passe forts et uniques, gérés par un gestionnaire.\n'
         '- Authentification à deux facteurs (2FA).\n'
         '- Mises à jour régulières.\n'
         '- Vigilance face au phishing.\n'
@@ -320,7 +320,7 @@ Course _cybercriminalite() => Course(
       'q1',
       'Qu\'est-ce qu\'un ransomware ?',
       'qcm',
-      'un logiciel qui chiffre vos données et demande une rançon|un antivirus|un pare-feu|un jeu',
+      "un logiciel qui chiffre vos données et demande une rançon|un logiciel qui enregistre discrètement vos frappes au clavier|un outil qui sauvegarde vos données dans le cloud|un programme qui affiche des publicités non désirées",
       '0',
       'Le ransomware chiffre vos fichiers puis exige une rançon pour les débloquer.',
     ]),
@@ -328,17 +328,17 @@ Course _cybercriminalite() => Course(
       'q2',
       'La principale motivation des cybercriminels est...',
       'qcm',
-      'l\'argent|le sport|l\'art|la science',
+      'l\'argent|la curiosité|la vengeance|la célébrité',
       '0',
       'L\'argent motive la grande majorité des cyberattaques.',
     ]),
     q(const [
       'q3',
-      'Vrai ou faux : écrire un virus "juste pour tester" est sans conséquence.',
+      'Vrai ou faux : diffuser un virus "juste pour tester" est sans conséquence.',
       'tf',
       'Faux',
       null,
-      'Créer et diffuser du code malveillant est illégal, même si c\'est "pour tester".',
+      'Diffuser du code malveillant est illégal, même "pour tester" : il échappe vite à tout contrôle. La recherche se fait dans un labo isolé, avec un motif légitime.',
     ]),
     q(const [
       'q4',
@@ -418,9 +418,25 @@ Course _redTeam() => Course(
       'q1',
       'Le rôle d\'une Red Team est de...',
       'qcm',
-      'défendre un réseau|simuler des attaques autorisées pour tester les défenses|installer des antivirus|gérer les mots de passe',
+      "surveiller les alertes de sécurité vingt-quatre heures sur vingt-quatre|simuler des attaques autorisées pour tester les défenses|rédiger la politique de sécurité de l'entreprise|gérer les mots de passe et les comptes des employés",
       '1',
       'La Red Team joue le rôle de l\'attaquant pour renforcer la sécurité.',
+    ]),
+    q(const [
+      'q2',
+      "Quel est le premier préalable à une opération Red Team ?",
+      'qcm',
+      "Une autorisation explicite et un cadre|Un antivirus désactivé sur les postes|Une annonce publique aux employés|Un accès administrateur au réseau",
+      '0',
+      "Sans autorisation, les mêmes techniques sont des infractions.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : la Red Team sert aussi à tester les réactions des équipes de défense.",
+      'tf',
+      'Vrai',
+      null,
+      "Elle mesure la détection et la réponse, pas seulement les failles.",
     ]),
   ],
   exercises: [
@@ -481,9 +497,25 @@ Course _blueTeam() => Course(
       'q1',
       'La Blue Team...',
       'qcm',
-      'attaque les systèmes|cible des intrusions|défend et surveille les systèmes|vend des données',
+      "simule des attaques pour l'entreprise|achète des failles à des chercheurs|défend et surveille les systèmes|développe les logiciels de l'entreprise",
       '2',
       'La Blue Team est la défense : surveillance, détection et réponse.',
+    ]),
+    q(const [
+      'q2',
+      "Quel outil collecte et analyse les journaux de toute l'organisation ?",
+      'qcm',
+      "Un VPN|Un proxy|Un SIEM|Un NAT",
+      '2',
+      "Le SIEM centralise les journaux et lève des alertes.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : renforcer la configuration des systèmes ne fait pas partie des missions de la Blue Team.",
+      'tf',
+      'Faux',
+      null,
+      "Le durcissement fait partie de la défense, avec la surveillance et la réponse.",
     ]),
   ],
   exercises: [
@@ -557,9 +589,25 @@ Course _pentest() => Course(
       'q1',
       'Un pentest se distingue d\'une attaque réelle par...',
       'qcm',
-      'les outils utilisés|l\'autorisation et le périmètre contractuel|la rapidité|le niveau technique',
+      "les outils utilisés pendant les essais|l'autorisation et le périmètre contractuel|la rapidité avec laquelle il est mené|le niveau technique des personnes impliquées",
       '1',
       'La différence clé est le cadre : autorisation écrite et périmètre défini.',
+    ]),
+    q(const [
+      'q2',
+      "Dans un pentest en boîte noire, le testeur...",
+      'qcm',
+      "ne connaît pas le système à l'avance|dispose du code source complet|travaille sans aucune autorisation|administre déjà les serveurs testés",
+      '0',
+      "Il part des mêmes informations qu'un attaquant extérieur.",
+    ]),
+    q(const [
+      'q3',
+      "Quel est le principal livrable d'un pentest ?",
+      'qcm',
+      "Une liste de mots de passe à conserver|Un rapport avec preuves et recommandations|Un antivirus installé sur chaque poste|Une démonstration publique des failles",
+      '1',
+      "Le rapport décrit les failles, leur impact et la façon de les corriger.",
     ]),
   ],
   exercises: [
@@ -624,9 +672,25 @@ Course _soc() => Course(
       'q1',
       'Que fait le SOC ?',
       'qcm',
-      'il attaque des systèmes|c\'est une équipe qui surveille et répond aux incidents|il installe des jeux|il gère les salaires',
+      "c'est une équipe qui mène des attaques pour le compte d'un client|c'est une équipe qui surveille et répond aux incidents|c'est un service qui répare les ordinateurs des employés|c'est un logiciel qui remplace les antivirus",
       '1',
       'Le SOC surveille en continu et répond aux incidents de sécurité.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait en premier lieu un analyste SOC de niveau 1 ?",
+      'qcm',
+      "La chasse aux menaces|L'analyse forensique|Le triage des alertes|La réécriture du SIEM",
+      '2',
+      "Le niveau 1 classe les alertes ; les niveaux 2 et 3 approfondissent.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : le threat hunting consiste à rechercher des menaces sans attendre une alerte.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est une démarche proactive, souvent menée par le niveau 3.",
     ]),
   ],
   exercises: [
@@ -669,7 +733,7 @@ Course _vulnerabilite() => Course(
         'Les vulnérabilités connues sont référencées sous un identifiant unique : le CVE (Common Vulnerabilities and Exposures), par exemple CVE-2021-44228 (Log4Shell).',
       ),
       text(
-        'Le score CVSS (Common Vulnerability Scoring System) évalue la gravité d\'une vulnérabilité de 0 à 10. Au-delà de 7, on parle souvent de vulnérabilité critique.',
+        'Le score CVSS (Common Vulnerability Scoring System) évalue la gravité d\'une vulnérabilité de 0 à 10. De 7,0 à 8,9, la gravité est élevée ; à partir de 9,0, elle est critique (CVSS v3).',
       ),
     ]),
     sec('De la vulnérabilité à la correction', [
@@ -692,9 +756,25 @@ Course _vulnerabilite() => Course(
       'q1',
       'Une vulnérabilité est...',
       'qcm',
-      'une faiblesse exploitable|un antivirus|un mot de passe|un réseau',
+      "une faiblesse exploitable|un programme malveillant|une attaque en cours|un correctif de sécurité",
       '0',
       'C\'est une faiblesse qui peut être exploitée.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce qu'un exploit ?",
+      'qcm',
+      "Un moyen d'utiliser une vulnérabilité|Un correctif publié par l'éditeur|Un score de gravité de 0 à 10|Un inventaire des logiciels installés",
+      '0',
+      "L'exploit tire parti de la faiblesse ; le correctif la supprime.",
+    ]),
+    q(const [
+      'q3',
+      "À quoi sert un identifiant CVE ?",
+      'qcm',
+      "À mesurer la gravité d'une faille|À désigner une vulnérabilité connue|À chiffrer un rapport d'audit|À identifier un attaquant précis",
+      '1',
+      "CVE nomme la vulnérabilité ; CVSS en mesure la gravité.",
     ]),
   ],
   exercises: [
@@ -760,6 +840,22 @@ Course _malware() => Course(
       '0',
       'Le ver se propage automatiquement par le réseau, sans action de la victime.',
     ]),
+    q(const [
+      'q2',
+      "Quel malware se fait passer pour un logiciel légitime ?",
+      'qcm',
+      "Un ver réseau|Un enregistreur de frappe|Un cheval de Troie|Un rançongiciel",
+      '2',
+      "Le trojan compte sur l'utilisateur pour être installé.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un keylogger enregistre ce que vous tapez au clavier.",
+      'tf',
+      'Vrai',
+      null,
+      "Il vise notamment les mots de passe.",
+    ]),
   ],
   exercises: [
     ex(
@@ -822,9 +918,25 @@ Course _phishing() => Course(
       'q1',
       'Un signe typique de phishing est...',
       'qcm',
-      'un message créant l\'urgence et demandant un mot de passe|une facture légitime que vous vérifiez|un message sans aucun lien|une mise à jour automatique',
+      "un message créant l'urgence et demandant un mot de passe|un message attendu d'un collègue, confirmé par téléphone|une facture que vous retrouvez dans votre espace client officiel|une mise à jour proposée par les réglages du téléphone",
       '0',
       'L\'urgence et la demande de secrets sont les marqueurs du phishing.',
+    ]),
+    q(const [
+      'q2',
+      "Que faire si un message de votre banque vous semble douteux ?",
+      'qcm',
+      "Contacter la banque par un autre canal|Répondre au message pour demander une preuve|Cliquer pour examiner le site|Transférer le lien à vos proches",
+      '0',
+      "Le message lui-même ne prouve rien : on vérifie ailleurs.",
+    ]),
+    q(const [
+      'q3',
+      "Vous avez saisi votre mot de passe sur un faux site. Que faire d'abord ?",
+      'qcm',
+      "Attendre de voir si un problème survient|Changer ce mot de passe et activer le 2FA|Supprimer le message et ne rien dire|Vider le cache de votre navigateur",
+      '1',
+      "Le mot de passe est compromis : il faut le rendre inutilisable.",
     ]),
   ],
   exercises: [
@@ -890,6 +1002,22 @@ Course _ransomware() => Course(
       'payer vite la rançon|des sauvegardes régulières et hors ligne|désactiver l\'antivirus|ouvrir toutes les pièces jointes',
       '1',
       'Les sauvegardes hors ligne permettent de restaurer sans payer.',
+    ]),
+    q(const [
+      'q2',
+      "Que faire d'abord sur un poste en cours de chiffrement ?",
+      'qcm',
+      "Payer la rançon demandée|Relancer une sauvegarde|Le déconnecter du réseau|Installer un antivirus",
+      '2',
+      "On empêche la propagation aux autres machines et aux partages.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : payer la rançon garantit de récupérer ses fichiers.",
+      'tf',
+      'Faux',
+      null,
+      "Il n'y a aucune garantie, et cela finance les attaquants.",
     ]),
   ],
   exercises: [
@@ -957,6 +1085,22 @@ Course _securiteNumerique() => Course(
       'cour et simple|long et unique par service|le même partout|une date de naissance',
       '1',
       'Un mot de passe fort est long, unique, imprévisible, et propre à chaque service.',
+    ]),
+    q(const [
+      'q2',
+      "Que protège la double authentification si votre mot de passe fuit ?",
+      'qcm',
+      "L'accès à votre compte|Le contenu de vos e-mails envoyés|La vitesse de votre connexion|Les fichiers de votre disque dur",
+      '0',
+      "Le mot de passe seul ne suffit plus pour se connecter.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : réutiliser un même mot de passe fort sur plusieurs sites est sans risque.",
+      'tf',
+      'Faux',
+      null,
+      "Si un site fuit, tous les autres comptes sont exposés.",
     ]),
   ],
   exercises: [

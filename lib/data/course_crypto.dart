@@ -45,7 +45,7 @@ Course _encoding() => Course(
     sec("Les reconnaître", [
       list(
         "- **Base64** : lettres, chiffres, + et /, souvent terminé par = ou ==.\n"
-        "- **Hash** : longueur fixe en hexadécimal (64 caractères pour SHA-256), quel que soit le texte d'origine.\n"
+        "- **Hash** : longueur fixe quel que soit le texte d'origine, souvent en hexadécimal (64 caractères pour SHA-256) ; bcrypt commence par \$2.\n"
         "- **Chiffré** : octets d'apparence aléatoire, souvent présentés en Base64.",
       ),
       code(
@@ -261,7 +261,7 @@ Course _passwords() => Course(
       'q1',
       "À quoi sert le sel ?",
       'qcm',
-      "À rendre chaque empreinte unique, même pour des mots de passe identiques|À chiffrer la base de données|À accélérer la connexion|À remplacer le mot de passe",
+      "À rendre unique l'empreinte de mots de passe identiques|À chiffrer la base de données qui contient les empreintes|À accélérer la vérification du mot de passe à la connexion|À permettre de retrouver un mot de passe oublié",
       '0',
       "Il rend inutiles les tables précalculées et masque les mots de passe identiques.",
     ]),
@@ -323,7 +323,7 @@ Course _symmetric() => Course(
     sec("Les modes", [
       list(
         "- **ECB** : chaque bloc chiffré séparément ; des blocs identiques donnent des blocs chiffrés identiques. À proscrire.\n"
-        "- **CBC** : enchaîne les blocs, exige un vecteur d'initialisation (IV) imprévisible.\n"
+        "- **CBC** : enchaîne les blocs, exige un vecteur d'initialisation (IV) imprévisible ; ne détecte pas les modifications, à compléter par un HMAC.\n"
         "- **GCM** : chiffre ET authentifie (détecte toute modification). Recommandé.",
       ),
       warn(
@@ -450,7 +450,7 @@ Course _asymmetric() => Course(
       'q2',
       "Pourquoi TLS utilise-t-il aussi un chiffrement symétrique ?",
       'qcm',
-      "L'asymétrique est trop lent pour chiffrer toutes les données|Le symétrique est plus récent|Pour éviter les certificats|Par obligation légale",
+      "L'asymétrique est trop lent pour chiffrer toutes les données|L'asymétrique n'est pas assez sûr pour un usage sur Internet|Le symétrique évite d'avoir à utiliser un certificat|Le symétrique ne nécessite aucune clé secrète",
       '0',
       "C'est le chiffrement hybride : l'asymétrique établit la clé, le symétrique chiffre le flux.",
     ]),
@@ -502,7 +502,7 @@ Course _signatures() => Course(
       list(
         "- Mises à jour logicielles et paquets Linux signés.\n"
         "- Certificats TLS (signés par une autorité).\n"
-        "- Jetons JWT signés.\n"
+        "- Jetons JWT signés (RS256, ES256 ; HS256 est un HMAC).\n"
         "- Commits Git signés.",
       ),
     ]),
@@ -599,10 +599,12 @@ Course _pki() => Course(
     ]),
     sec("Expiration et révocation", [
       text(
-        "Les certificats ont une durée de vie courte (Let's Encrypt délivre "
-        "des certificats de 90 jours, renouvelés automatiquement par ACME). "
-        "Un certificat compromis avant son expiration est révoqué (CRL, "
-        "OCSP).",
+        "Les certificats ont une durée de vie courte, et de plus en plus : "
+        "ceux de Let's Encrypt durent 90 jours par défaut, puis 64 jours dès "
+        "février 2027 et 45 jours dès février 2028. Le renouvellement est "
+        "automatique (protocole ACME). Un certificat compromis avant son "
+        "expiration est révoqué, par des listes (CRL) ou par OCSP, que Let's "
+        "Encrypt a arrêté en 2025.",
       ),
       warn(
         "Un certificat auto-signé chiffre la connexion mais ne prouve "
@@ -640,7 +642,7 @@ Course _pki() => Course(
       'q3',
       "Que fait-on d'un certificat dont la clé privée a fuité ?",
       'qcm',
-      "On le révoque et on en émet un nouveau|On attend son expiration|On change le nom du site|Rien",
+      "On le révoque et on en émet un nouveau|On le renouvelle avec la même clé privée|On attend son expiration, puis on le remplace|On change seulement le nom de domaine",
       '0',
       "La révocation (CRL, OCSP) signale qu'il ne faut plus lui faire confiance.",
     ]),
@@ -648,7 +650,7 @@ Course _pki() => Course(
   exercises: [
     ex(
       "Inspecter un certificat",
-      "Dans votre navigateur, cliquez sur le cadenas d'un site HTTPS et "
+      "Dans votre navigateur, cliquez sur l'icône à gauche de l'adresse d'un site HTTPS et "
           "affichez son certificat : notez l'émetteur, la chaîne et la date "
           "d'expiration.",
     ),
@@ -672,9 +674,10 @@ Course _tls() => Course(
       code(
         "Client → Serveur : Client Hello (versions, algorithmes, part de clé, SNI)\n"
         "Serveur → Client : Server Hello (choix, part de clé)\n"
-        "                   + certificat et preuve de possession de la clé privée\n"
-        "Les deux         : calculent le même secret (Diffie-Hellman éphémère)\n"
-        "                   puis chiffrent tout avec une clé symétrique (AES-GCM)",
+        "                   puis, déjà chiffrés : certificat et preuve de\n"
+        "                   possession de la clé privée\n"
+        "Les deux         : le même secret (Diffie-Hellman éphémère) donne les\n"
+        "                   clés symétriques du reste de l'échange (AES-GCM)",
         label: "Résumé",
       ),
       tip(
@@ -687,7 +690,8 @@ Course _tls() => Course(
         "Avec Diffie-Hellman éphémère, chaque session a sa propre clé, "
         "oubliée ensuite. Même si la clé privée du serveur fuit plus tard, "
         "les échanges enregistrés auparavant restent indéchiffrables. TLS 1.3 "
-        "l'impose.",
+        "l'impose, sauf pour certaines reprises de session (clé prépartagée "
+        "seule, données 0-RTT).",
       ),
     ]),
     sec("Configuration faible", [
@@ -716,7 +720,7 @@ Course _tls() => Course(
       'q1',
       "Que garantit la confidentialité persistante (forward secrecy) ?",
       'qcm',
-      "Les anciennes sessions restent protégées même si la clé privée fuit plus tard|Le site ne peut pas être piraté|Le certificat n'expire jamais|Le trafic est plus rapide",
+      "Les sessions passées restent protégées si la clé privée fuit|Le serveur ne peut plus être victime d'une intrusion|Le certificat reste valide même après sa date d'expiration|Les sessions futures n'ont plus besoin d'être chiffrées",
       '0',
       "Chaque session utilise une clé éphémère, jamais réutilisée.",
     ]),
@@ -724,7 +728,7 @@ Course _tls() => Course(
       'q2',
       "Quelles versions doivent être désactivées ?",
       'qcm',
-      "SSL 3.0, TLS 1.0 et TLS 1.1|TLS 1.2 et 1.3|Uniquement TLS 1.3|Aucune",
+      "SSL 3.0, TLS 1.0 et TLS 1.1|TLS 1.1, TLS 1.2 et TLS 1.3|TLS 1.2 et TLS 1.3 seulement|Uniquement SSL 3.0",
       '0',
       "Elles sont obsolètes et vulnérables.",
     ]),

@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.7.1] - 2026-11-23
+
+### Corrections du contenu des cours
+Relecture des 48 cours qui ne l'avaient pas été en 1.7.0.
+
+- OWASP : les cours web suivent le Top 10 **2025** (la SSRF est rattachée au contrôle d'accès, les composants vulnérables à la chaîne d'approvisionnement).
+- Pare-feu : l'exemple iptables posait la politique DROP en premier, ce qui coupe une session SSH distante.
+- CSRF : `SameSite=Lax` envoie encore le cookie quand on suit un lien ; le cours disait le contraire.
+- SSRF : se connecter à l'adresse vérifiée, sinon le nom peut changer entre-temps.
+- Droit : les affirmations trop larges sur le scan de ports et l'écriture de code malveillant sont nuancées (articles 323-1, 323-3-1 et 323-7 du Code pénal).
+- Certificats : durées de Let's Encrypt (64 puis 45 jours) et arrêt d'OCSP ; TLS 1.3 : le certificat est déjà chiffré, exceptions à la confidentialité persistante.
+- Exercices Linux : l'un écrasait `notes.txt` et échouait sur `mkdir scripts` ; l'autre demandait de trouver `/etc` avec un `tree` qui ne le montre pas.
+- Balisage réseau : la question avait deux réponses défendables ; elle est reformulée.
+- Injection SQL : l'entrée malveillante de l'exemple ne produisait pas la requête affichée.
+- Explication citant des options supprimées en 1.6.1, affirmations sans source, formulations inexactes et coquilles.
+
+## [1.7.0] - 2026-11-23
+
+### Quiz
+- **159 questions** ajoutées : chaque cours en a désormais au moins 3 (72 cours n'en avaient qu'une, 15 en avaient deux). Une seule bonne réponse ne suffit plus à terminer un cours. Les cours déjà terminés le restent.
+
+### Corrections du contenu des cours
+- Python : la regex d'extraction d'IP ne renvoyait que `.42` avec `findall` (groupe capturant) ; `readlines()` après `read()` renvoyait une liste vide.
+- Bash : trois extractions d'IP fausses dans les exemples de logs (mauvais champ), et `{date}` au lieu de `$(date)`.
+- CVSS : élevé de 7,0 à 8,9, critique à partir de 9,0.
+- CORS : la combinaison `*` et Allow-Credentials est refusée par les navigateurs ; le risque est la réflexion de l'origine avec les cookies.
+- Deux « 90 % » sans source retirés ; plusieurs passages erronés ou illisibles (RAM, DNS, cookie de session, ports).
+
+## [1.6.1] - 2026-11-23
+
+### Quiz
+- 88 QCM sur 199 ont de nouvelles mauvaises réponses, plausibles et de longueur comparable (cinq bonnes réponses sont raccourcies, sans changer de sens). « Toujours choisir la plus longue » réussissait 65 % des QCM, contre 31 % maintenant (25 % au hasard).
+- Les identifiants des questions et la position des bonnes réponses ne changent pas : la progression est conservée.
+- Un test empêche ce biais de revenir (plus longue, plus courte, options en double).
+
 ## [1.6.0] - 2026-11-23
 
 ### Quiz (correction importante)
