@@ -53,6 +53,7 @@ class RewardKeys {
       'quiz:$courseId/$questionId';
   static String soc(String alertId) => 'soc:$alertId';
   static String ctf(String challengeId) => 'ctf:$challengeId';
+  static String wireshark(String exerciseId) => 'ws:$exerciseId';
 }
 
 /// Jour local au format AAAA-MM-JJ.
@@ -252,6 +253,14 @@ class UserState {
 
   /// Valide un challenge. Si sa solution a été affichée avant la première
   /// réussite, le challenge est marqué résolu mais ne rapporte aucun XP.
+  /// Exercice de filtrage Wireshark réussi (une récompense par exercice).
+  int solveFilterExercise(String exerciseId, int amount) =>
+      grant(RewardKeys.wireshark(exerciseId), amount, skill: 'Réseau');
+
+  /// Nombre de récompenses dont la clé commence par [prefix] (`soc:`…).
+  int rewardCount(String prefix) =>
+      rewardedKeys.where((k) => k.startsWith(prefix)).length;
+
   int solveChallenge(String challengeId, int amount) {
     if (!solvedChallenges.contains(challengeId)) {
       solvedChallenges.add(challengeId);

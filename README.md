@@ -4,18 +4,22 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.2.0** (code 3).
+Version : **1.3.0** (code 4).
 
 ## Fonctionnalités
 
 - **Apprendre** : 95 cours en 6 catégories (Fondamentaux 12, Linux 21, Réseau 26, Bash 12, Python 12, Web 12).
 - **Quiz** : QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
-- **CTF** : 12 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
+- **CTF** : 28 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting), filtrables par catégorie. 13 d'entre eux se résolvent dans le terminal du Lab, sur ses fichiers virtuels, et la solution affiche la commande correspondante (vérifiée par les tests). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
 - **Parcours** : 6 parcours (un par catégorie). Le parcours choisi oriente l'Accueil (« Continuer ma formation », progression du parcours) et l'onglet Apprendre. Il se change depuis le Profil ou l'Accueil.
 - **Premier lancement** : présentation et règle éthique, prénom facultatif, choix du parcours. Il n'apparaît pas si des données existent déjà.
-- **Lab** : terminal Linux simulé sur un système de fichiers virtuel (voir plus bas), simulateur SOC (alertes fictives, correction rédigée à l'avance), filtres Wireshark, gestionnaire de labs en simulation.
+- **Lab** :
+  - terminal Linux simulé sur un système de fichiers virtuel (voir plus bas) ;
+  - **simulateur SOC** : 24 alertes fictives (dont des faux positifs). On choisit une gravité et une **décision** (Clôturer, Surveiller, Investiguer, Contenir) ; la correction donne l'action recommandée et la technique MITRE ATT&CK. Les alertes pas encore réussies sont proposées en priorité ;
+  - **Wireshark** : cours, mémo des filtres, **capture simulée** de 32 paquets avec de vrais filtres d'affichage (`ip.addr`, `tcp.flags.syn`, `contains`, `&&`, `||`, `!`…), 9 exercices validés sur le résultat du filtre (toute écriture équivalente est acceptée, 20 XP chacun), détail de chaque paquet, 4 scénarios d'analyse ;
+  - gestionnaire de labs en simulation.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
-- **Progression** : XP, niveaux, 11 badges, compétences, série quotidienne, temps d'apprentissage.
+- **Progression** : XP, niveaux, 13 badges (dont « Analyste SOC » et « Analyste réseau »), compétences, série quotidienne, temps d'apprentissage.
 - **Notes**, **Docs** (10 cheat sheets), mode sombre ou clair.
 
 ## Règles de progression

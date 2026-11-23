@@ -1,143 +1,61 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../data/soc_alerts.dart';
+import '../models/user_state.dart';
 import '../services/app_state.dart';
 
-class SocAlert {
-  final String id;
-  final String title;
-  final String details;
-  final String source;
-  final String
-  correctSeverity; // Critique | Élevé | Moyen | Faible | Informations
-  final String correctCategory; // Détection | Analyse | Triage | Réponse
-  final String explanation;
-
-  SocAlert({
-    required this.id,
-    required this.title,
-    required this.details,
-    required this.source,
-    required this.correctSeverity,
-    required this.correctCategory,
-    required this.explanation,
-  });
-}
-
-class _SocData {
-  static final alerts = [
-    SocAlert(
-      id: 's1',
-      title: 'Tentatives de connexion répétées',
-      details:
-          '35 échecs de connexion SSH (Failed password) depuis 203.0.113.7 en 2 minutes, vers le compte root.',
-      source: 'auth.log / SIEM',
-      correctSeverity: 'Élevé',
-      correctCategory: 'Détection',
-      explanation:
-          'Un brute-force en cours sur SSH : forte probabilité d\'attaque. Sévérité élevée car une compromission de root est possible. Action : verrouiller/limiter, bannir l\'IP, garantir des mots de passe forts.',
-    ),
-    SocAlert(
-      id: 's2',
-      title: 'Connexion depuis une nouvelle IP',
-      details:
-          'Connexion SSH réussie (Accepted) pour l\'utilisateur alice depuis 198.51.100.77, jamais vue pour ce compte.',
-      source: 'auth.log',
-      correctSeverity: 'Moyen',
-      correctCategory: 'Analyse',
-      explanation:
-          'Une connexion depuis une IP inconnue peut être légitime (télétravail) ou compromettre un compte. Sévérité moyenne. Action : vérifier avec alice si le déplacement est légitime (le 2FA aide).',
-    ),
-    SocAlert(
-      id: 's3',
-      title: 'Processus inhabituel',
-      details:
-          'Processus "minerd" consommant 350% CPU, absent de la liste des processus attendus, lancé depuis /tmp.',
-      source: 'EDR / ps aux',
-      correctSeverity: 'Critique',
-      correctCategory: 'Détection',
-      explanation:
-          'Un processus de minage de cryptomonnaie dans /tmp signe presque certainement une compromission (un attaquant a exécuté un mineur). Sévérité critique. Action : isoler la machine, analyser, éradiquer.',
-    ),
-    SocAlert(
-      id: 's4',
-      title: 'Fichier système modifié',
-      details:
-          'Le fichier /etc/passwd a été modifié à 02:30, pendant la nuit, hors des fenêtres de maintenance.',
-      source: 'FIM / auditd',
-      correctSeverity: 'Élevé',
-      correctCategory: 'Réponse',
-      explanation:
-          'Une modification du fichier des comptes (passwd) à une heure inhabituelle est très suspecte : création de compte backdoor possible. Sévérité élevée. Action : comparer avec la sauvegarde, vérifier les nouveaux comptes, enquêter.',
-    ),
-    SocAlert(
-      id: 's5',
-      title: 'Trafic réseau anormal',
-      details:
-          'Volume de données sortant de 2,5 Go en 10 minutes vers une IP externe inconnue, depuis un serveur de production.',
-      source: 'IDS / netflow',
-      correctSeverity: 'Critique',
-      correctCategory: 'Détection',
-      explanation:
-          'Une exfiltration de données massive et sortante vers une IP inconnue est une compromission probable. Sévérité critique. Action : bloquer la connexion, prélever des preuves, investiguer (IOC).',
-    ),
-    SocAlert(
-      id: 's6',
-      title: 'Élévation détectée',
-      details:
-          'Commande sudo exécutée par "bob" alors qu\'il n\'est pas dans le groupe sudo, puis accès à des fichiers sensibles.',
-      source: 'auth.log / logs sudo',
-      correctSeverity: 'Critique',
-      correctCategory: 'Réponse',
-      explanation:
-          'Une élévation de privilèges non autorisée est critique : elle permet de prendre le contrôle. Action : isoler le compte, analyser, corriger la faille d\'élévation.',
-    ),
-  ];
-
-  static SocAlert random() => alerts[Random().nextInt(alerts.length)];
-}
-
+/// Simulateur SOC : l'apprenant qualifie une alerte fictive (gravité et
+/// décision), puis lit une correction rédigée à l'avance.
 class SocSimulator extends StatefulWidget {
-  const SocSimulator({super.key});
+  const SocSimulator({super.key, this.random});
+
+  /// Générateur injectable (tests).
+  final Random? random;
 
   @override
   State<SocSimulator> createState() => _SocSimulatorState();
 }
 
 class _SocSimulatorState extends State<SocSimulator> {
-  late SocAlert _alert;
-  String? _severity;
-  String? _category;
-  bool _submitted = false;
+  static const xpPerAlert = 25;
 
-  @override
-  void initState() {
-    super.initState();
-    _alert = _SocData.random();
+  late final Random _random = widget.random ?? Random();
+  SocAlert? _alert;
+  String? _severity;
+  String? _decision;
+  bool _submitted = false;
+  int _xpGained = 0;
+
+  /// Prochaine alerte : en priorité une alerte pas encore réussie, jamais
+  /// la même deux fois de suite.
+  SocAlert _pick(AppState app) {
+    final all = SocCatalog.alerts;
+    final pending = all
+        .where((a) => !app.isRewarded(RewardKeys.soc(a.id)))
+        .where((a) => a.id != _alert?.id)
+        .toList();
+    final pool = pending.isNotEmpty
+        ? pending
+        : all.where((a) => a.id != _alert?.id).toList();
+    return pool[_random.nextInt(pool.length)];
   }
 
   void _new() {
     setState(() {
-      _alert = _SocData.random();
+      _alert = _pick(context.read<AppState>());
       _severity = null;
-      _category = null;
+      _decision = null;
       _submitted = false;
       _xpGained = 0;
     });
   }
 
-  static const xpPerAlert = 25;
-  int _xpGained = 0;
-
   Future<void> _submit() async {
+    final alert = _alert!;
     final app = context.read<AppState>();
-    final sevOk = _severity == _alert.correctSeverity;
-    final catOk = _category == _alert.correctCategory;
-    final gained = await app.resolveSocAlert(
-      _alert.id,
-      sevOk && catOk,
-      xpPerAlert,
-    );
+    final ok = _severity == alert.severity && _decision == alert.decision;
+    final gained = await app.resolveSocAlert(alert.id, ok, xpPerAlert);
     if (!mounted) return;
     setState(() {
       _xpGained = gained;
@@ -147,22 +65,39 @@ class _SocSimulatorState extends State<SocSimulator> {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final alert = _alert ??= _pick(app);
+    final solved = SocCatalog.alerts
+        .where((a) => app.isRewarded(RewardKeys.soc(a.id)))
+        .length;
+    final total = SocCatalog.alerts.length;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Icon(Icons.radar, size: 48, color: Colors.amber),
         const SizedBox(height: 8),
         const Text(
-          'SOC Simulator',
+          'Simulateur SOC',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         const Text(
-          'Analysez l\'alerte fictive : classez sa gravité et catégorisez-la. Une correction rédigée à l\'avance s\'affiche ensuite (25 XP une fois par alerte réussie).',
+          'Qualifiez l\'alerte fictive : sa gravité, puis la décision de '
+          'l\'analyste. Une correction rédigée à l\'avance s\'affiche ensuite '
+          '(25 XP une fois par alerte réussie).',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
+        const SizedBox(height: 12),
+        Text(
+          'Alertes réussies : $solved / $total',
+          key: const ValueKey('soc-progress'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(value: solved / total, minHeight: 6),
         const SizedBox(height: 16),
         Card(
           color: Colors.red.withValues(alpha: 0.12),
@@ -180,17 +115,20 @@ class _SocSimulatorState extends State<SocSimulator> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _alert.title,
+                        alert.title,
+                        key: const ValueKey('soc-title'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
+                    if (app.isRewarded(RewardKeys.soc(alert.id)))
+                      const Icon(Icons.check_circle, color: Colors.green),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(_alert.details),
+                Text(alert.details),
                 const SizedBox(height: 8),
                 Text(
-                  'Source : ${_alert.source}',
+                  'Source : ${alert.source}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
@@ -198,21 +136,13 @@ class _SocSimulatorState extends State<SocSimulator> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
-          '1. Niveau de gravité',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('1. Gravité', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
+          runSpacing: 4,
           children: [
-            for (final s in [
-              'Critique',
-              'Élevé',
-              'Moyen',
-              'Faible',
-              'Informations',
-            ])
+            for (final s in SocCatalog.severities)
               ChoiceChip(
                 label: Text(s),
                 selected: _severity == s,
@@ -224,29 +154,39 @@ class _SocSimulatorState extends State<SocSimulator> {
         ),
         const SizedBox(height: 16),
         const Text(
-          '2. Catégorie d\'action',
+          '2. Décision',
           style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _decision == null
+              ? 'Quelle est la prochaine étape ?'
+              : '$_decision : ${SocCatalog.decisionHelp[_decision]}',
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
+          runSpacing: 4,
           children: [
-            for (final c in ['Détection', 'Analyse', 'Triage', 'Réponse'])
+            for (final d in SocCatalog.decisions)
               ChoiceChip(
-                label: Text(c),
-                selected: _category == c,
+                label: Text(d),
+                tooltip: SocCatalog.decisionHelp[d],
+                selected: _decision == d,
                 onSelected: _submitted
                     ? null
-                    : (_) => setState(() => _category = c),
+                    : (_) => setState(() => _decision = d),
               ),
           ],
         ),
         const SizedBox(height: 16),
         if (_submitted)
-          _correction()
+          _correction(alert)
         else
           FilledButton.icon(
-            onPressed: (_severity != null && _category != null)
+            key: const ValueKey('soc-submit'),
+            onPressed: (_severity != null && _decision != null)
                 ? _submit
                 : null,
             icon: const Icon(Icons.fact_check),
@@ -256,6 +196,7 @@ class _SocSimulatorState extends State<SocSimulator> {
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.tonalIcon(
+            key: const ValueKey('soc-next'),
             onPressed: _new,
             icon: const Icon(Icons.refresh),
             label: const Text('Nouvelle alerte'),
@@ -265,31 +206,33 @@ class _SocSimulatorState extends State<SocSimulator> {
     );
   }
 
-  Widget _correction() {
-    final sevOk = _severity == _alert.correctSeverity;
-    final catOk = _category == _alert.correctCategory;
+  Widget _correction(SocAlert alert) {
+    final sevOk = _severity == alert.severity;
+    final decOk = _decision == alert.decision;
+    final ok = sevOk && decOk;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Card(
-          color: (sevOk && catOk)
+          color: ok
               ? Colors.green.withValues(alpha: 0.15)
               : Colors.orange.withValues(alpha: 0.15),
           child: ListTile(
             leading: Icon(
-              sevOk && catOk ? Icons.check_circle : Icons.info,
-              color: sevOk && catOk ? Colors.greenAccent : Colors.orange,
+              ok ? Icons.check_circle : Icons.info,
+              color: ok ? Colors.greenAccent : Colors.orange,
             ),
             title: Text(
-              sevOk && catOk
+              ok
                   ? (_xpGained > 0
                         ? 'Excellente analyse ! (+$_xpGained XP)'
                         : 'Excellente analyse ! (alerte déjà réussie, pas de nouveaux XP)')
                   : 'Les points à revoir',
+              key: const ValueKey('soc-verdict'),
             ),
             subtitle: Text(
-              'Gravité attendue : ${_alert.correctSeverity} (vous : ${_severity ?? "-"})  ·  '
-              'Catégorie : ${_alert.correctCategory} (vous : ${_category ?? "-"})',
+              'Gravité : ${alert.severity}${sevOk ? ' ✔' : ' (vous : $_severity)'}\n'
+              'Décision : ${alert.decision}${decOk ? ' ✔' : ' (vous : $_decision)'}',
             ),
           ),
         ),
@@ -305,29 +248,26 @@ class _SocSimulatorState extends State<SocSimulator> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text(_alert.explanation),
+                Text(alert.explanation),
                 const SizedBox(height: 8),
                 const Text(
-                  'Action recommandée :',
+                  'Action recommandée',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                _extractAction(context),
+                const SizedBox(height: 4),
+                Text(alert.action),
+                if (alert.mitre != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'MITRE ATT&CK : ${alert.mitre}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _extractAction(BuildContext context) {
-    final exp = _alert.explanation;
-    final idx = exp.indexOf('Action :');
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        idx >= 0 ? exp.substring(idx + 'Action :'.length).trim() : '—',
-      ),
     );
   }
 }

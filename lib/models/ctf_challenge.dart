@@ -20,6 +20,11 @@ class CtfChallenge {
   /// Vrai pour les commandes : sous Linux, la casse est significative.
   final bool caseSensitive;
 
+  /// Commande qui, tapée dans le terminal simulé du Lab (depuis le dossier
+  /// personnel), affiche de quoi trouver la réponse. Montrée avec la
+  /// solution ; les tests vérifient qu'elle fonctionne réellement.
+  final String? terminalCommand;
+
   CtfChallenge({
     required this.id,
     required this.title,
@@ -34,6 +39,7 @@ class CtfChallenge {
     required this.explanation,
     this.acceptedAnswers = const [],
     this.caseSensitive = false,
+    this.terminalCommand,
   });
 
   bool isCorrect(String input) => AnswerMatcher.matches(

@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.3.0] - 2026-11-23
+
+### Simulateur SOC
+- 24 alertes au lieu de 6 : hameçonnage, PowerShell encodé, rançongiciel, tunnel DNS, web shell, password spraying, clé SSH ajoutée, journaux effacés, usurpation ARP, fuite vers un stockage personnel… et des faux positifs (maintenance planifiée, fichier de test EICAR, VPN cohérent).
+- Le second choix devient une **décision** explicite (Clôturer, Surveiller, Investiguer, Contenir), avec une aide pour chacune. Les réponses des 6 alertes d'origine ont été harmonisées avec ce barème ; leurs identifiants sont conservés, donc les XP déjà obtenus restent acquis.
+- La correction sépare l'explication et l'action recommandée, et cite la technique MITRE ATT&CK.
+- Les alertes pas encore réussies sont tirées en priorité, jamais deux fois de suite la même. Compteur « Alertes réussies : x / 24 ».
+
+### CTF
+- 28 challenges au lieu de 12. 13 se résolvent dans le terminal du Lab (analyse de auth.log et access.log, drapeau de root, /etc/passwd, sshd_config, crontab, syslog, Base64, ROT13, chmod +x…).
+- La solution affiche la commande à taper dans le terminal ; un test exécute chacune de ces commandes et vérifie qu'elle affiche bien la réponse.
+- Le filtre de catégories est construit à partir des données (« OSINT », sans challenge, disparaît ; « Scripting » et « Forensic » apparaissent).
+
+### Wireshark
+- Nouvel onglet **Capture** : une capture simulée de 32 paquets (HTTPS, intranet en HTTP avec mot de passe en clair, ping, tunnel DNS, scan SYN, usurpation ARP).
+- Moteur de **filtres d'affichage** : protocoles, `ip.addr` / `ip.src` / `ip.dst`, ports, drapeaux TCP, champs DNS / HTTP / TLS / ARP, opérateurs `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `&&`, `||`, `!`, parenthèses. Barre verte ou rouge et message d'erreur explicite, comme dans Wireshark.
+- 9 exercices validés sur l'ensemble des paquets affichés : toute écriture équivalente est acceptée. 20 XP par exercice, une seule fois.
+- Détail de chaque paquet (champs), et 4 scénarios d'analyse appuyés sur la capture. L'onglet « Filtres » devient un mémo plus complet.
+
+### Terminal
+- Nouvelle commande `tr` (translittération, plages, `-d`).
+- `base64 -d` accepte l'absence de « = » final.
+
+### Badges
+- « Analyste SOC » (10 alertes réussies) et « Analyste réseau » (5 exercices Wireshark).
+
+### Tests
+- 237 tests (216 auparavant).
+
 ## [1.2.0] - 2026-11-23
 
 ### Parcours d'apprentissage

@@ -1170,6 +1170,7 @@ class TerminalEngine {
     'printenv',
     'export',
     'base64',
+    'tr',
     'true',
     'false',
     'labreset',
@@ -1363,6 +1364,8 @@ class TerminalEngine {
         return _ok('');
       case 'base64':
         return _base64(rest, stdin);
+      case 'tr':
+        return _tr(rest, stdin);
       case 'true':
         return _ok('');
       case 'false':
@@ -1409,7 +1412,7 @@ VIRTUEL (rien n'est exécuté sur votre appareil).
 Fichiers   : pwd  cd  ls [-la]  cat  head  tail  touch  mkdir [-p]  rmdir
              rm [-r]  cp [-r]  mv  find  tree  file  stat  chmod  chown
 Texte      : grep [-ivncloEr]  wc [-lwc]  sort [-rnu]  uniq [-c]  cut -d -f
-             awk '{print \$1}'  sed 's/a/b/g'  echo  base64 [-d]
+             awk '{print \$1}'  sed 's/a/b/g'  tr  echo  base64 [-d]
 Système    : whoami  id  ps  df  free  uname  date  env  history  sudo
 Réseau     : ifconfig  ping  nmap  curl  ssh  (simulés)
 Shell      : |  >  >>  <  2>/dev/null  ;  &&  ||  \$VAR  \$(cmd)  *.log
@@ -2428,7 +2431,11 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     final text = res.inputs.map((e) => e.$2).join();
     if (o.flags.contains('d') || o.flags.contains('--decode')) {
       try {
-        final cleaned = text.replaceAll(RegExp(r'\s'), '');
+        var cleaned = text.replaceAll(RegExp(r'\s'), '');
+        // Remplissage « = » manquant (fréquent dans les noms DNS, URL…).
+        while (cleaned.length % 4 != 0) {
+          cleaned += '=';
+        }
         return _Out(
           utf8.decode(base64.decode(cleaned), allowMalformed: true),
           res.err,
@@ -2443,6 +2450,51 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
       res.err,
       res.err.isEmpty ? 0 : 1,
     );
+  }
+
+  /// Développe un ensemble de `tr` : plages (`a-z`), `\n`, `\t`.
+  static List<String> _trSet(String spec) {
+    final s = spec.replaceAll(r'\n', '\n').replaceAll(r'\t', '\t');
+    final out = <String>[];
+    for (var i = 0; i < s.length; i++) {
+      if (i + 2 < s.length && s[i + 1] == '-') {
+        final a = s.codeUnitAt(i), b = s.codeUnitAt(i + 2);
+        if (a <= b) {
+          for (var c = a; c <= b; c++) {
+            out.add(String.fromCharCode(c));
+          }
+          i += 2;
+          continue;
+        }
+      }
+      out.add(s[i]);
+    }
+    return out;
+  }
+
+  /// tr simplifié : `tr SET1 SET2` (translittération) et `tr -d SET1`.
+  _Out _tr(List<String> args, String? stdin) {
+    final o = _opts(args);
+    final text = stdin ?? '';
+    if (o.flags.contains('d')) {
+      if (o.rest.isEmpty) return _fail('tr: opérande manquant');
+      final del = _trSet(o.rest.first).toSet();
+      return _ok(text.split('').where((c) => !del.contains(c)).join());
+    }
+    if (o.rest.length < 2) {
+      return _fail(
+        'tr: opérande manquant\nUtilisation : tr ENSEMBLE1 ENSEMBLE2 '
+        '(ex. tr \'a-z\' \'A-Z\')',
+      );
+    }
+    final from = _trSet(o.rest[0]);
+    final to = _trSet(o.rest[1]);
+    if (to.isEmpty) return _fail('tr: ENSEMBLE2 vide');
+    final map = <String, String>{};
+    for (var i = 0; i < from.length; i++) {
+      map.putIfAbsent(from[i], () => i < to.length ? to[i] : to.last);
+    }
+    return _ok(text.split('').map((c) => map[c] ?? c).join());
   }
 
   _Out _sudo(List<String> rest, String? stdin, int depth) {

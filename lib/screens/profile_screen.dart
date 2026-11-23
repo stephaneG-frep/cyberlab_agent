@@ -187,6 +187,10 @@ IconData _badgeIcon(String name) {
       return Icons.flag;
     case 'workspace_premium':
       return Icons.workspace_premium;
+    case 'radar':
+      return Icons.radar;
+    case 'filter_alt':
+      return Icons.filter_alt;
     case 'stars':
       return Icons.stars;
     default:
