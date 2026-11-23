@@ -4,7 +4,7 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.5.0** (code 6).
+Version : **1.6.0** (code 7).
 
 ## Fonctionnalités
 
@@ -19,9 +19,11 @@ Version : **1.5.0** (code 6).
   - terminal Linux simulé sur un système de fichiers virtuel (voir plus bas) ;
   - **simulateur SOC** : 24 alertes fictives (dont des faux positifs). On choisit une gravité et une **décision** (Clôturer, Surveiller, Investiguer, Contenir) ; la correction donne l'action recommandée et la technique MITRE ATT&CK. Les alertes pas encore réussies sont proposées en priorité ;
   - **Wireshark** : cours, mémo des filtres, **capture simulée** de 32 paquets avec de vrais filtres d'affichage (`ip.addr`, `tcp.flags.syn`, `contains`, `&&`, `||`, `!`…), 9 exercices validés sur le résultat du filtre (toute écriture équivalente est acceptée, 20 XP chacun), détail de chaque paquet, 4 scénarios d'analyse ;
-  - gestionnaire de labs en simulation.
+  - **enquêtes guidées** : 4 scénarios (21 étapes) qui enchaînent terminal, filtres sur la capture, questions et décisions. Jusqu'à 100 XP par enquête, 10 de moins par mauvaise décision (50 au minimum), avancement conservé.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
-- **Progression** : XP, niveaux, 17 badges (dont « Analyste SOC », « Analyste réseau » et un par nouveau niveau), compétences, série quotidienne, temps d'apprentissage.
+- **Recherche** : dans le texte des cours, les fiches, les challenges et les notes, sans tenir compte des accents ni de la casse. Les réponses (quiz, CTF) ne sont pas indexées.
+- **Statistiques** : XP et temps sur 7, 30 ou 90 jours (graphique et tableau). L'activité est datée depuis la 1.6.0 ; l'activité antérieure n'a pas été enregistrée jour par jour.
+- **Progression** : XP, niveaux, 18 badges (dont « Analyste SOC », « Analyste réseau » et un par nouveau niveau), compétences, série quotidienne, temps d'apprentissage.
 - **Prérequis** : chaque cours indique les cours conseillés avant lui (état et accès direct). Ce sont des recommandations : rien n'est verrouillé, mais la liste « Apprendre » signale les prérequis manquants et « Continuer ma formation » propose d'abord un cours dont les prérequis sont faits.
 - **Rappel quotidien** (facultatif, désactivé par défaut) : une notification locale par jour à l'heure choisie (Paramètres → Rappel quotidien), sautée les jours où l'on a déjà pratiqué.
 - **Accessibilité** : libellés pour le lecteur d'écran (TalkBack) sur les boutons, statistiques, barres de progression et compétences ; résultats du quiz et du terminal annoncés automatiquement ; affichage vérifié avec une police agrandie à 200 % ; zones tactiles d'au moins 48 dp.

@@ -35,6 +35,8 @@ class BadgeService {
         return user.level >= d.threshold;
       case 'soc':
         return user.rewardCount('soc:') >= d.threshold;
+      case 'scenario':
+        return user.rewardCount('scenario:') >= d.threshold;
       case 'wireshark':
         return user.rewardCount('ws:') >= d.threshold;
       default:
