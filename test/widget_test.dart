@@ -17,7 +17,11 @@ import 'package:cyberlab_agent/screens/ctf_screen.dart';
 import 'package:cyberlab_agent/screens/notes_screen.dart';
 import 'package:cyberlab_agent/screens/profile_screen.dart';
 import 'package:cyberlab_agent/screens/settings_screen.dart';
+import 'dart:math';
+import 'package:cyberlab_agent/data/soc_alerts.dart';
 import 'package:cyberlab_agent/screens/terminal_screen.dart';
+import 'package:cyberlab_agent/screens/wireshark_screen.dart';
+import 'package:cyberlab_agent/widgets/soc_simulator.dart';
 import 'package:cyberlab_agent/services/backup_service.dart';
 import 'package:cyberlab_agent/services/app_state.dart';
 import 'package:cyberlab_agent/services/secret_store.dart';
@@ -452,6 +456,151 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('7'), findsOneWidget);
     expect(find.text(r'~/logs$ '), findsWidgets);
+  });
+
+  testWidgets('SOC : bonne analyse récompensée, progression mise à jour', (
+    tester,
+  ) async {
+    final app = _state();
+    await app.ready;
+    await tester.pumpWidget(
+      _wrapped(
+        Scaffold(body: SocSimulator(random: Random(1))),
+        app: app,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Alertes réussies : 0 / ${SocCatalog.alerts.length}'),
+      findsOneWidget,
+    );
+
+    final title = tester
+        .widget<Text>(find.byKey(const ValueKey('soc-title')))
+        .data!;
+    final alert = SocCatalog.alerts.firstWhere((a) => a.title == title);
+    await _reveal(tester, find.widgetWithText(ChoiceChip, alert.severity));
+    await tester.tap(find.widgetWithText(ChoiceChip, alert.severity));
+    await _reveal(tester, find.widgetWithText(ChoiceChip, alert.decision));
+    await tester.tap(find.widgetWithText(ChoiceChip, alert.decision));
+    await tester.pump();
+    await _reveal(tester, find.byKey(const ValueKey('soc-submit')));
+    await tester.tap(find.byKey(const ValueKey('soc-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Excellente analyse ! (+25 XP)'),
+      findsOneWidget,
+    );
+    expect(find.textContaining(alert.action), findsOneWidget);
+    expect(app.user.xp, 25);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('soc-progress')),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text('Alertes réussies : 1 / ${SocCatalog.alerts.length}'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('SOC : la nouvelle alerte n\'est jamais la même', (tester) async {
+    await tester.pumpWidget(
+      _wrapped(Scaffold(body: SocSimulator(random: Random(3)))),
+    );
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 5; i++) {
+      final before = tester
+          .widget<Text>(find.byKey(const ValueKey('soc-title')))
+          .data;
+      await _reveal(tester, find.byKey(const ValueKey('soc-next')));
+      await tester.tap(find.byKey(const ValueKey('soc-next')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('soc-title')),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final after = tester
+          .widget<Text>(find.byKey(const ValueKey('soc-title')))
+          .data;
+      expect(after, isNot(before));
+    }
+  });
+
+  testWidgets('Wireshark : filtre en direct, erreur, exercice validé', (
+    tester,
+  ) async {
+    final app = _state();
+    await app.ready;
+    await tester.pumpWidget(
+      _wrapped(const Scaffold(body: WiresharkScreen()), app: app),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SegmentedButton<int>),
+        matching: find.text('Capture'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('32 / 32 paquets'), findsOneWidget);
+
+    // Filtre invalide : message d'erreur, bouton désactivé.
+    await tester.enterText(
+      find.byKey(const ValueKey('ws-filter')),
+      'ip.addr = 1',
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('=='), findsWidgets);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('ws-check')))
+          .onPressed,
+      isNull,
+    );
+
+    // Exercice 1 : une autre écriture que la référence est acceptée.
+    await tester.enterText(
+      find.byKey(const ValueKey('ws-filter')),
+      'ip.src == 192.168.56.10 or ip.dst == 192.168.56.10',
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('7 / 32 paquets'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('ws-check')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Bravo ! Filtre correct (+20 XP)'),
+      findsOneWidget,
+    );
+    expect(app.user.xp, 20);
+
+    // Exercice suivant : un filtre faux est expliqué.
+    await tester.tap(find.byKey(const ValueKey('ws-next')));
+    await tester.pumpAndSettle();
+    // (« udp » serait accepté : ici, tout l'UDP est du DNS.)
+    await tester.enterText(find.byKey(const ValueKey('ws-filter')), 'arp');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ws-check')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Pas encore'), findsOneWidget);
+  });
+
+  testWidgets('Wireshark : le détail du paquet 17 révèle le mot de passe', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrapped(const Scaffold(body: CaptureLab())));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('ws-filter')),
+      'http.request.method == "POST"',
+    );
+    await tester.pumpAndSettle();
+    await _reveal(tester, find.byKey(const ValueKey('packet-17')));
+    await tester.tap(find.byKey(const ValueKey('packet-17')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Printemps2026!'), findsOneWidget);
   });
 }
 

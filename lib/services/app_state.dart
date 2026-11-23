@@ -421,6 +421,9 @@ Règles impératives :
   Future<int> resolveSocAlert(String alertId, bool correct, int xp) =>
       _reward(() => user.resolveSocAlert(alertId, correct, xp));
 
+  Future<int> solveFilterExercise(String exerciseId, int xp) =>
+      _reward(() => user.solveFilterExercise(exerciseId, xp));
+
   Future<int> solveChallenge(String challengeId, int xp) =>
       _reward(() => user.solveChallenge(challengeId, xp));
 

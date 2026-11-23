@@ -16,14 +16,10 @@ class CtfScreen extends StatefulWidget {
 class _CtfScreenState extends State<CtfScreen> {
   String _category = 'Tous';
 
-  static const _cats = [
+  /// Catégories présentes dans le catalogue (aucun filtre vide).
+  static final List<String> _cats = [
     'Tous',
-    'Linux',
-    'Web',
-    'Réseau',
-    'Crypto',
-    'Logs',
-    'OSINT',
+    ...{for (final c in ctfChallenges()) c.category},
   ];
 
   @override
@@ -346,6 +342,29 @@ class _ChallengeViewState extends State<ChallengeView> {
               ),
             const SizedBox(height: 8),
             Text(c.explanation),
+            if (c.terminalCommand != null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Dans le terminal du Lab :',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: SelectableText(
+                  c.terminalCommand!,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    color: Colors.greenAccent,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
