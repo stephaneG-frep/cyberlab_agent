@@ -5,6 +5,7 @@ import '../models/course.dart';
 import '../widgets/common.dart';
 import '../widgets/path_picker.dart';
 import 'course_view.dart';
+import 'review_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -54,6 +55,22 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 16),
+          if (app.mistakes.isNotEmpty) ...[
+            Card(
+              key: const ValueKey('home-review'),
+              color: Colors.orange.withValues(alpha: 0.12),
+              child: ListTile(
+                leading: const Icon(Icons.replay, color: Colors.orange),
+                title: Text('${app.mistakes.length} question(s) à revoir'),
+                subtitle: const Text('Les réussir rapporte encore leurs XP.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ReviewScreen())),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           _statsGrid(app),
           if (app.user.skills.isNotEmpty) ...[
             const SizedBox(height: 16),

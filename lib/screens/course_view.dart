@@ -5,6 +5,8 @@ import '../services/app_state.dart';
 import 'package:provider/provider.dart';
 import '../widgets/common.dart';
 import '../widgets/quiz_runner.dart';
+import '../data/terminal_exercises.dart';
+import 'terminal_practice_screen.dart';
 
 class CourseView extends StatefulWidget {
   final Course course;
@@ -305,6 +307,8 @@ class _ExercisesTab extends StatelessWidget {
           'autant que vous voulez pour vous entraîner.',
         ),
         const SizedBox(height: 16),
+        if (terminalExercises[course.id] case final practice?)
+          _PracticeCard(course: course, exercise: practice),
         for (var i = 0; i < course.exercises.length; i++)
           Card(
             child: Padding(
@@ -358,6 +362,14 @@ String _skillFor(String category) {
       return 'Python';
     case 'web_security':
       return 'Web';
+    case 'network_security':
+      return 'Sécurité réseau';
+    case 'crypto':
+      return 'Cryptographie';
+    case 'incident_response':
+      return 'Réponse à incident';
+    case 'windows':
+      return 'Windows';
     default:
       return 'Général';
   }
@@ -542,6 +554,73 @@ class _PrerequisitesSection extends StatelessWidget {
               },
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Exercice vérifié dans le terminal (accessible avant la fin du cours).
+class _PracticeCard extends StatelessWidget {
+  final Course course;
+  final TerminalExercise exercise;
+  const _PracticeCard({required this.course, required this.exercise});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final done = app.isRewarded(RewardKeys.terminal(course.id));
+    return Card(
+      key: const ValueKey('practice-card'),
+      color: Colors.teal.withValues(alpha: 0.12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.terminal, color: Colors.tealAccent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pratique vérifiée : ${exercise.title}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                if (done)
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.greenAccent,
+                    semanticLabel: 'réussi',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(exercise.instruction),
+            const SizedBox(height: 4),
+            Text(
+              done
+                  ? 'Réussi : XP obtenus. Vous pouvez recommencer pour vous entraîner.'
+                  : 'Le terminal vérifie votre travail automatiquement '
+                        '(${exercise.xp} XP, une seule fois).',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              key: const ValueKey('practice-open'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TerminalPracticeScreen(
+                    exercise: exercise,
+                    skill: _skillFor(course.category),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Ouvrir le terminal'),
+            ),
+          ],
+        ),
       ),
     );
   }

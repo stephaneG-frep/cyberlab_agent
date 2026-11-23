@@ -168,4 +168,52 @@ List<BadgeDef> badgeDefs() => [
     type: 'wireshark',
     threshold: 5,
   ),
+  BadgeDef(
+    badge: Badge(
+      id: 'b-netsec',
+      name: 'Défenseur réseau',
+      description: 'Terminez 4 cours de Sécurité réseau.',
+      icon: 'shield',
+      color: '#8B90F0',
+    ),
+    type: 'courses',
+    category: 'network_security',
+    threshold: 4,
+  ),
+  BadgeDef(
+    badge: Badge(
+      id: 'b-crypto',
+      name: 'Cryptographe',
+      description: 'Terminez 4 cours de Cryptographie.',
+      icon: 'key',
+      color: '#E2B93D',
+    ),
+    type: 'courses',
+    category: 'crypto',
+    threshold: 4,
+  ),
+  BadgeDef(
+    badge: Badge(
+      id: 'b-ir',
+      name: 'Intervenant incident',
+      description: 'Terminez 4 cours de Réponse à incident.',
+      icon: 'policy',
+      color: '#A6E22E',
+    ),
+    type: 'courses',
+    category: 'incident_response',
+    threshold: 4,
+  ),
+  BadgeDef(
+    badge: Badge(
+      id: 'b-windows',
+      name: 'Gardien de l\'annuaire',
+      description: 'Terminez 4 cours Windows et Active Directory.',
+      icon: 'desktop_windows',
+      color: '#5B8DEF',
+    ),
+    type: 'courses',
+    category: 'windows',
+    threshold: 4,
+  ),
 ];

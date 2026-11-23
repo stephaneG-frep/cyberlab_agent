@@ -52,10 +52,34 @@ class LearningPaths {
       Icons.smart_toy,
     ),
     LearningPath(
+      'network_security',
+      'Sécurité réseau',
+      'Segmentation, pare-feu, IDS, VPN, Wi-Fi, homme du milieu, analyse de trafic.',
+      Icons.security,
+    ),
+    LearningPath(
       'web_security',
       'Sécurité Web',
       'HTTP, OWASP Top 10, injections et défenses.',
       Icons.language,
+    ),
+    LearningPath(
+      'crypto',
+      'Cryptographie',
+      'Hachage, mots de passe, chiffrement, signatures, certificats, TLS.',
+      Icons.key,
+    ),
+    LearningPath(
+      'incident_response',
+      'Réponse à incident',
+      'Triage, confinement, preuves, journaux, chronologie, rapport.',
+      Icons.policy,
+    ),
+    LearningPath(
+      'windows',
+      'Windows et Active Directory',
+      "PowerShell, journaux d'événements, AD, Kerberos, attaques et durcissement.",
+      Icons.desktop_windows,
     ),
   ];
 

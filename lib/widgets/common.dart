@@ -143,6 +143,14 @@ Color categoryColor(String category) {
       return CyberLabSeed.blue;
     case 'web_security':
       return CyberLabSeed.red;
+    case 'network_security':
+      return CyberLabSeed.purple;
+    case 'crypto':
+      return CyberLabSeed.amber;
+    case 'incident_response':
+      return CyberLabSeed.green;
+    case 'windows':
+      return CyberLabSeed.blue;
     default:
       return CyberLabSeed.blue;
   }
@@ -161,7 +169,15 @@ String categoryLabel(String category) {
     case 'python':
       return 'Python';
     case 'web_security':
-      return 'Web Security';
+      return 'Sécurité Web';
+    case 'network_security':
+      return 'Sécurité réseau';
+    case 'crypto':
+      return 'Cryptographie';
+    case 'incident_response':
+      return 'Réponse à incident';
+    case 'windows':
+      return 'Windows et AD';
     default:
       return category;
   }

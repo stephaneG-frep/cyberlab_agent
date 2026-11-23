@@ -14,6 +14,12 @@ List<Course> webSecurityCourses() => [
   _owaspIntro(),
   _owaspAccess(),
   _owaspInjection(),
+  _xss(),
+  _csrf(),
+  _ssrf(),
+  _upload(),
+  _misconfig(),
+  _components(),
 ];
 
 Course _webIntro() => Course(
@@ -881,4 +887,561 @@ Course _owaspInjection() => Course(
     ),
   ],
   xp: 100,
+);
+
+// ---------------------------------------------------------------------------
+// Familles OWASP complémentaires. La numérotation citée est celle de
+// l'édition 2021 du Top 10 ; le classement est révisé régulièrement, mais les
+// familles de failles restent.
+// ---------------------------------------------------------------------------
+
+Course _xss() => Course(
+  id: 'web-xss',
+  title: 'Le cross-site scripting (XSS)',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Comprendre les XSS réfléchi, stocké et DOM",
+    "Savoir ce qu'un attaquant peut faire avec une XSS",
+    "Appliquer l'encodage en sortie et la CSP",
+  ],
+  prerequisites: ["Les injections (OWASP A03)", "Les cookies"],
+  sections: [
+    sec("Le principe", [
+      text(
+        "Une XSS survient quand une application insère dans sa page une "
+        "donnée fournie par l'utilisateur sans la neutraliser. Le navigateur "
+        "de la victime exécute alors le script de l'attaquant, avec les "
+        "droits du site. Dans le Top 10 2021, la XSS fait partie de la "
+        "famille des injections.",
+      ),
+      code(
+        "https://site.example/recherche?q=<script>alert(1)</script>",
+        label: "Test classique (sur votre propre application)",
+      ),
+    ]),
+    sec("Trois variantes", [
+      list(
+        "- **Réfléchie** : le script est dans le lien et renvoyé immédiatement par la page.\n"
+        "- **Stockée** : le script est enregistré (commentaire, profil) et frappe chaque visiteur.\n"
+        "- **DOM** : le JavaScript de la page insère lui-même la donnée dangereuse (innerHTML).",
+      ),
+      text(
+        "Conséquences : vol de session (si le cookie n'est pas HttpOnly), "
+        "actions au nom de la victime, faux formulaire de connexion, "
+        "défiguration du site.",
+      ),
+    ]),
+    sec("Se protéger", [
+      list(
+        "- **Encoder en sortie** selon le contexte (HTML, attribut, JavaScript, URL) ; les moteurs de gabarits modernes le font par défaut.\n"
+        "- Utiliser textContent plutôt qu'innerHTML côté navigateur.\n"
+        "- **Content-Security-Policy** : interdit les scripts non autorisés.\n"
+        "- Cookies de session **HttpOnly**.",
+      ),
+      warn(
+        "Filtrer « <script> » ne suffit pas : il existe des dizaines d'autres "
+        "façons d'exécuter du JavaScript (attributs onerror, liens javascript:).",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Compter sur une liste noire de mots comme « script »",
+    "Désactiver l'échappement automatique du moteur de gabarits",
+    "Insérer des données avec innerHTML",
+  ],
+  summary:
+      "XSS = donnée utilisateur exécutée comme script dans la page. Trois "
+      "variantes (réfléchie, stockée, DOM). Défense : encodage en sortie "
+      "selon le contexte, CSP, cookies HttpOnly.",
+  quiz: [
+    q(const [
+      'q1',
+      "Quelle XSS frappe tous les visiteurs d'une page ?",
+      'qcm',
+      "La XSS stockée|La XSS réfléchie|La CSRF|L'injection SQL",
+      '0',
+      "Le script est enregistré côté serveur et servi à chaque visiteur.",
+    ]),
+    q(const [
+      'q2',
+      "Quelle est la défense principale contre la XSS ?",
+      'qcm',
+      "Encoder les données en sortie selon le contexte|Chiffrer la base de données|Utiliser POST au lieu de GET|Changer le port du serveur",
+      '0',
+      "Les caractères spéciaux deviennent du texte inoffensif.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : l'attribut HttpOnly empêche un script XSS de lire le cookie de session.",
+      'tf',
+      'Vrai',
+      null,
+      "Le cookie reste envoyé au serveur mais devient invisible pour JavaScript.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Repérer les points d'injection",
+      "Sur une application de test que vous contrôlez (par exemple OWASP "
+          "Juice Shop en local), listez les champs dont le contenu est réaffiché "
+          "dans la page.",
+    ),
+  ],
+);
+
+Course _csrf() => Course(
+  id: 'web-csrf',
+  title: 'La falsification de requête (CSRF)',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Comprendre comment une CSRF abuse de la session de la victime",
+    "Connaître les jetons anti-CSRF et l'attribut SameSite",
+  ],
+  prerequisites: ["Les sessions et l'authentification", "Les cookies"],
+  sections: [
+    sec("Le principe", [
+      text(
+        "La victime est connectée à sa banque. Elle visite une page piégée "
+        "qui envoie discrètement une requête vers la banque. Le navigateur "
+        "joint automatiquement le cookie de session : la banque croit que la "
+        "victime a voulu faire ce virement.",
+      ),
+      code(
+        "<form action=\"https://banque.example/virement\" method=\"POST\">\n"
+        "  <input name=\"vers\" value=\"attaquant\">\n"
+        "  <input name=\"montant\" value=\"500\">\n"
+        "</form>\n"
+        "<script>document.forms[0].submit()</script>",
+        label: "Page piégée (exemple pédagogique)",
+      ),
+    ]),
+    sec("Se protéger", [
+      list(
+        "- **Jeton anti-CSRF** : une valeur imprévisible liée à la session, exigée dans chaque formulaire ; la page piégée ne peut pas la connaître.\n"
+        "- **SameSite=Lax ou Strict** sur le cookie de session : il n'est plus envoyé par les requêtes provenant d'autres sites.\n"
+        "- Redemander le mot de passe pour les actions sensibles.\n"
+        "- Ne jamais modifier de données avec GET.",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Changer un état (suppression, virement) avec une requête GET",
+    "Croire que HTTPS protège contre la CSRF",
+  ],
+  summary:
+      "La CSRF fait exécuter une action par le navigateur connecté de la "
+      "victime. Défenses : jeton anti-CSRF, cookies SameSite, "
+      "réauthentification, pas de modification par GET.",
+  quiz: [
+    q(const [
+      'q1',
+      "Sur quoi repose une attaque CSRF ?",
+      'qcm',
+      "Le navigateur joint automatiquement le cookie de session|Une faille du chiffrement TLS|Un mot de passe faible|Un serveur DNS piraté",
+      '0',
+      "La requête forgée part du navigateur de la victime, avec ses cookies.",
+    ]),
+    q(const [
+      'q2',
+      "Quel attribut de cookie limite la CSRF ?",
+      'qcm',
+      "SameSite|Path|Expires|Domain",
+      '0',
+      "SameSite empêche l'envoi du cookie depuis d'autres sites.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : HTTPS suffit à empêcher la CSRF.",
+      'tf',
+      'Faux',
+      null,
+      "La requête forgée passe elle aussi en HTTPS, avec le cookie.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Analyser un formulaire",
+      "Dans les outils de développement de votre navigateur, examinez un "
+          "formulaire de modification de profil sur une application que vous "
+          "contrôlez : contient-il un jeton anti-CSRF ? Le cookie a-t-il "
+          "l'attribut SameSite ?",
+    ),
+  ],
+);
+
+Course _ssrf() => Course(
+  id: 'web-ssrf',
+  title: 'La falsification de requête côté serveur (SSRF)',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Comprendre comment un serveur peut être utilisé comme relais",
+    "Connaître les cibles typiques (réseau interne, métadonnées cloud)",
+    "Mettre en place une liste d'autorisation",
+  ],
+  prerequisites: ["APIs et REST", "Segmentation, VLAN et DMZ"],
+  sections: [
+    sec("Le principe", [
+      text(
+        "Certaines fonctions récupèrent une URL fournie par l'utilisateur "
+        "(aperçu de lien, import d'image, webhook). Si le serveur accepte "
+        "n'importe quelle adresse, l'attaquant lui fait interroger des "
+        "ressources internes inaccessibles depuis Internet. SSRF est la "
+        "catégorie A10 du Top 10 2021.",
+      ),
+      code(
+        "POST /apercu  url=http://192.168.56.10/admin\n"
+        "POST /apercu  url=http://169.254.169.254/   (métadonnées du cloud)",
+        label: "Requêtes malveillantes",
+      ),
+    ]),
+    sec("Pourquoi c'est grave", [
+      text(
+        "Le serveur se trouve souvent dans une zone de confiance : il voit "
+        "l'intranet, les interfaces d'administration et, chez les hébergeurs "
+        "cloud, un service de métadonnées qui peut délivrer des identifiants "
+        "temporaires.",
+      ),
+    ]),
+    sec("Se protéger", [
+      list(
+        "- **Liste d'autorisation** des domaines ou adresses joignables, plutôt qu'une liste de refus.\n"
+        "- Résoudre le nom puis refuser les adresses privées, de boucle locale et lien-local.\n"
+        "- Désactiver les redirections automatiques ou revérifier chaque destination.\n"
+        "- Filtrer le trafic sortant du serveur.\n"
+        "- Utiliser la version protégée du service de métadonnées (IMDSv2 chez AWS).",
+      ),
+      tip(
+        "CyberLab applique lui-même ce principe pour le coach : en HTTP, un "
+        "nom .local est résolu et refusé s'il pointe vers une adresse "
+        "publique.",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Vérifier le texte de l'URL sans résoudre l'adresse réelle",
+    "Suivre aveuglément les redirections",
+  ],
+  summary:
+      "SSRF : le serveur est utilisé pour atteindre des ressources internes "
+      "ou les métadonnées cloud. Défenses : liste d'autorisation, refus des "
+      "adresses internes après résolution, filtrage sortant.",
+  quiz: [
+    q(const [
+      'q1',
+      "Quelle fonction est typiquement exposée à la SSRF ?",
+      'qcm',
+      "Un aperçu de lien qui récupère une URL fournie|Un formulaire de contact|Un menu déroulant|Une page statique",
+      '0',
+      "Le serveur va chercher une adresse choisie par l'utilisateur.",
+    ]),
+    q(const [
+      'q2',
+      "Pourquoi l'adresse 169.254.169.254 est-elle une cible prisée ?",
+      'qcm',
+      "C'est le service de métadonnées de nombreux clouds|C'est le DNS de Google|C'est l'adresse du routeur domestique|C'est une adresse de diffusion",
+      '0',
+      "Il peut fournir des identifiants temporaires de la machine.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une liste d'autorisation est plus sûre qu'une liste de refus contre la SSRF.",
+      'tf',
+      'Vrai',
+      null,
+      "On n'oublie jamais une forme d'adresse quand seules les destinations prévues passent.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Concevoir le contrôle",
+      "Décrivez les vérifications qu'une fonction « importer une image "
+          "depuis une URL » doit faire avant d'envoyer la requête.",
+    ),
+  ],
+);
+
+Course _upload() => Course(
+  id: 'web-upload',
+  title: 'Le téléversement de fichiers',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Comprendre comment un téléversement mène à un web shell",
+    "Valider type, taille et nom des fichiers",
+    "Stocker les fichiers sans permettre leur exécution",
+  ],
+  prerequisites: ["Le contrôle d'accès (OWASP A01)"],
+  sections: [
+    sec("Le risque", [
+      text(
+        "Si un site accepte un fichier shell.php et le place dans un dossier "
+        "servi par le serveur web, il suffit de l'appeler dans le navigateur "
+        "pour exécuter des commandes sur le serveur. C'est un web shell (voir "
+        "l'alerte correspondante du simulateur SOC).",
+      ),
+      code(
+        "GET /uploads/shell.php?cmd=whoami\n"
+        "GET /uploads/shell.php?cmd=cat+/etc/passwd",
+        label: "Traces typiques dans access.log",
+      ),
+    ]),
+    sec("Valider", [
+      list(
+        "- **Liste d'autorisation** des extensions (jpg, png, pdf), jamais une liste de refus.\n"
+        "- Vérifier le contenu réel (signature du fichier), pas seulement l'extension ou le type annoncé par le navigateur.\n"
+        "- Limiter la taille.\n"
+        "- Renommer le fichier avec un nom aléatoire généré par le serveur.",
+      ),
+    ]),
+    sec("Stocker", [
+      list(
+        "- Hors de la racine du site web, ou dans un stockage dédié.\n"
+        "- Sans droit d'exécution, avec l'exécution de scripts désactivée dans ce dossier.\n"
+        "- Servi par un script qui contrôle l'accès et impose le bon type de contenu.\n"
+        "- Analysé par un antivirus si les fichiers sont partagés.",
+      ),
+      warn(
+        "Une image peut contenir du code : le renommage et l'interdiction "
+        "d'exécution restent indispensables même après validation.",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Se fier à l'extension ou au type fourni par le navigateur",
+    "Stocker les fichiers téléversés dans un dossier exécutable du site",
+    "Garder le nom de fichier choisi par l'utilisateur",
+  ],
+  summary:
+      "Un téléversement mal contrôlé mène au web shell. Liste d'autorisation, "
+      "vérification du contenu, taille limitée, nom aléatoire, stockage hors "
+      "racine et sans exécution.",
+  quiz: [
+    q(const [
+      'q1',
+      "Qu'est-ce qu'un web shell ?",
+      'qcm',
+      "Un script déposé sur le serveur qui exécute des commandes via le navigateur|Un navigateur sécurisé|Un pare-feu applicatif|Un certificat",
+      '0',
+      "Il donne à l'attaquant une console sur le serveur.",
+    ]),
+    q(const [
+      'q2',
+      "Vrai ou faux : vérifier l'extension .jpg suffit à garantir qu'un fichier est une image.",
+      'tf',
+      'Faux',
+      null,
+      "L'extension se change librement ; il faut vérifier le contenu et empêcher l'exécution.",
+    ]),
+    q(const [
+      'q3',
+      "Où stocker les fichiers téléversés ?",
+      'qcm',
+      "Hors de la racine du site, sans droit d'exécution|Dans le dossier principal du site|Dans /etc|Dans le dossier des scripts",
+      '0',
+      "Ils ne doivent jamais pouvoir être exécutés par le serveur web.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Identifier un vrai type",
+      "Dans le terminal du Lab : file documents/notes.pdf scripts/analyse_logs.sh. "
+          "Expliquez pourquoi un serveur devrait faire la même vérification sur "
+          "les fichiers reçus.",
+    ),
+  ],
+);
+
+Course _misconfig() => Course(
+  id: 'web-misconfig',
+  title: 'Les mauvaises configurations',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Reconnaître les configurations dangereuses courantes",
+    "Durcir un serveur web et une application",
+    "Configurer les en-têtes de sécurité",
+  ],
+  prerequisites: ["Les en-têtes HTTP"],
+  sections: [
+    sec("Les classiques", [
+      list(
+        "- Mode débogage actif en production (traces d'erreur détaillées).\n"
+        "- Listing des répertoires activé.\n"
+        "- Comptes et mots de passe par défaut.\n"
+        "- Fichiers oubliés : .git, sauvegardes .bak, commentaires bavards.\n"
+        "- Stockage cloud ouvert au public.\n"
+        "- En-têtes de sécurité absents.",
+      ),
+      text(
+        "La mauvaise configuration est la catégorie A05 du Top 10 2021 : "
+        "aucune ligne de code n'est fautive, mais le réglage expose tout.",
+      ),
+    ]),
+    sec("En-têtes de sécurité", [
+      code(
+        "Strict-Transport-Security: max-age=31536000; includeSubDomains\n"
+        "Content-Security-Policy: default-src 'self'\n"
+        "X-Content-Type-Options: nosniff\n"
+        "Referrer-Policy: strict-origin-when-cross-origin\n"
+        "Permissions-Policy: camera=(), microphone=()",
+        label: "Exemple d'en-têtes",
+      ),
+    ]),
+    sec("Durcir", [
+      text(
+        "Partir d'une configuration minimale, désactiver tout ce qui n'est "
+        "pas utilisé, afficher des messages d'erreur génériques, et "
+        "automatiser la configuration pour qu'elle soit identique et vérifiée "
+        "sur tous les environnements.",
+      ),
+      tip(
+        "Un commentaire oublié est visible dans le Lab : "
+        "cat /var/www/html/index.html dans le terminal.",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Laisser le débogage actif en production",
+    "Publier le dossier .git avec le site",
+    "Afficher des traces d'erreur détaillées aux visiteurs",
+  ],
+  summary:
+      "Débogage, listing, identifiants par défaut, fichiers oubliés, en-têtes "
+      "absents : la configuration expose sans faille de code. Configuration "
+      "minimale, erreurs génériques, en-têtes de sécurité, automatisation.",
+  quiz: [
+    q(const [
+      'q1',
+      "Pourquoi le mode débogage est-il dangereux en production ?",
+      'qcm',
+      "Il révèle des détails internes (code, chemins, requêtes)|Il ralentit l'affichage des images|Il désactive HTTPS|Il supprime les journaux",
+      '0',
+      "Les traces d'erreur détaillées aident l'attaquant à comprendre l'application.",
+    ]),
+    q(const [
+      'q2',
+      "Quel en-tête impose HTTPS au navigateur pour les visites suivantes ?",
+      'qcm',
+      "Strict-Transport-Security|X-Powered-By|Server|Accept",
+      '0',
+      "C'est HSTS.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un dossier .git accessible sur le site peut exposer tout le code source.",
+      'tf',
+      'Vrai',
+      null,
+      "L'historique Git permet de reconstruire le code, et parfois des secrets.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Trouver la fuite du lab",
+      "Dans le terminal du Lab, lisez /var/www/html/index.html. Quelle "
+          "information n'aurait jamais dû être publiée ?",
+    ),
+  ],
+);
+
+Course _components() => Course(
+  id: 'web-components',
+  title: 'Composants vulnérables et chaîne d\'approvisionnement',
+  category: 'web_security',
+  level: 'Niveau 6 - Sécurité Web',
+  levelNumber: 6,
+  objectives: [
+    "Comprendre le risque des dépendances",
+    "Suivre les CVE et appliquer les correctifs",
+    "Tenir un inventaire des composants (SBOM)",
+  ],
+  prerequisites: ["OWASP : top des risques Web"],
+  sections: [
+    sec("Le code des autres", [
+      text(
+        "Une application moderne embarque des centaines de bibliothèques. "
+        "Une faille dans l'une d'elles devient une faille de l'application. "
+        "C'est la catégorie A06 du Top 10 2021 (composants vulnérables et "
+        "obsolètes).",
+      ),
+      text(
+        "Exemple marquant : Log4Shell (CVE-2021-44228, fin 2021), une faille "
+        "de la bibliothèque de journalisation Java Log4j, présente dans "
+        "d'innombrables logiciels.",
+      ),
+    ]),
+    sec("Suivre et corriger", [
+      list(
+        "- Inventorier les composants et leurs versions (SBOM).\n"
+        "- Surveiller les CVE et avis de sécurité (CERT-FR, éditeurs).\n"
+        "- Mettre à jour régulièrement, en priorité ce qui est exposé.\n"
+        "- Utiliser des outils d'analyse de dépendances dans l'intégration continue.\n"
+        "- Supprimer les dépendances inutiles.",
+      ),
+    ]),
+    sec("La chaîne d'approvisionnement", [
+      text(
+        "Un attaquant peut aussi piéger un paquet populaire, publier un "
+        "paquet au nom presque identique (typosquatting) ou compromettre un "
+        "outil de compilation. Défenses : verrouiller les versions (fichiers "
+        "de verrouillage), vérifier les signatures et l'origine, limiter les "
+        "droits de l'intégration continue.",
+      ),
+      warn(
+        "Une version épinglée n'est pas une version figée pour toujours : "
+        "les mises à jour de sécurité doivent rester suivies.",
+      ),
+    ]),
+  ],
+  commonMistakes: [
+    "Ne jamais mettre à jour les dépendances « tant que ça marche »",
+    "Ignorer les dépendances indirectes",
+    "Installer un paquet sans vérifier son nom exact",
+  ],
+  summary:
+      "Les bibliothèques importent leurs failles. Inventaire (SBOM), veille "
+      "CVE, mises à jour, analyse automatique, et vigilance sur la chaîne "
+      "d'approvisionnement (typosquatting, signatures, versions verrouillées).",
+  quiz: [
+    q(const [
+      'q1',
+      "Qu'est-ce qu'une SBOM ?",
+      'qcm',
+      "L'inventaire des composants logiciels d'une application|Un type de pare-feu|Un algorithme de chiffrement|Un format d'image",
+      '0',
+      "Software Bill of Materials : la liste des composants et de leurs versions.",
+    ]),
+    q(const [
+      'q2',
+      "Le typosquatting consiste à...",
+      'qcm',
+      "Publier un paquet au nom presque identique à un paquet connu|Taper un mot de passe trop vite|Saturer un serveur|Chiffrer des fichiers",
+      '0',
+      "Une faute de frappe à l'installation suffit à installer le paquet piégé.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une faille dans une bibliothèque utilisée par l'application peut compromettre l'application.",
+      'tf',
+      'Vrai',
+      null,
+      "Log4Shell en est l'exemple le plus connu.",
+    ]),
+  ],
+  exercises: [
+    ex(
+      "Inventaire",
+      "Choisissez un projet que vous connaissez et listez ses dépendances "
+          "directes avec leur version. Cherchez si l'une d'elles a une CVE "
+          "publiée.",
+    ),
+  ],
 );
