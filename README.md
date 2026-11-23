@@ -4,14 +4,16 @@ Application Flutter d'apprentissage de la cybersécurité pour Android : cours, 
 
 > Apprentissage uniquement, sur systèmes autorisés. Le terminal et les labs sont **simulés** : aucune commande n'est exécutée sur l'appareil.
 
-Version : **1.1.0** (code 2).
+Version : **1.2.0** (code 3).
 
 ## Fonctionnalités
 
 - **Apprendre** : 95 cours en 6 catégories (Fondamentaux 12, Linux 21, Réseau 26, Bash 12, Python 12, Web 12).
 - **Quiz** : QCM et vrai/faux (le moteur gère aussi la réponse libre et la commande). Il propose des indices qui ne donnent pas la réponse, affiche la bonne réponse en clair et l'explique. On peut recommencer un quiz.
 - **CTF** : 12 challenges (Linux, Web, Réseau, Crypto, Logs, Forensic, Scripting). Indices progressifs, solution sur demande, après confirmation : un challenge dont la solution a été affichée ne rapporte plus d'XP. Les variantes de réponse sont listées une par une. Pour les commandes, majuscules et minuscules comptent.
-- **Lab** : terminal Linux simulé, simulateur SOC (alertes fictives, correction rédigée à l'avance), filtres Wireshark, gestionnaire de labs en simulation.
+- **Parcours** : 6 parcours (un par catégorie). Le parcours choisi oriente l'Accueil (« Continuer ma formation », progression du parcours) et l'onglet Apprendre. Il se change depuis le Profil ou l'Accueil.
+- **Premier lancement** : présentation et règle éthique, prénom facultatif, choix du parcours. Il n'apparaît pas si des données existent déjà.
+- **Lab** : terminal Linux simulé sur un système de fichiers virtuel (voir plus bas), simulateur SOC (alertes fictives, correction rédigée à l'avance), filtres Wireshark, gestionnaire de labs en simulation.
 - **CyberCoach** : professeur IA **facultatif** (Ollama, OpenAI, Anthropic, Gemini, Mistral, API compatible OpenAI). Il garde la mémoire de la conversation.
 - **Progression** : XP, niveaux, 11 badges, compétences, série quotidienne, temps d'apprentissage.
 - **Notes**, **Docs** (10 cheat sheets), mode sombre ou clair.
@@ -54,6 +56,8 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 
 ## Stockage, secrets et sauvegardes
 
+- **Export / import manuel** : Paramètres → « Sauvegarde de la progression ». L'export crée un fichier JSON (`cyberlab-sauvegarde-AAAA-MM-JJ.json`) à l'emplacement choisi via le sélecteur de fichiers Android, sans permission de stockage. Il contient la progression, les notes, les réglages non secrets (thème, fournisseur, modèle, adresse) et, sur demande, l'historique du coach. Il ne contient **jamais** de clé API. L'import vérifie le fichier, montre un aperçu, demande confirmation, copie l'état actuel sous `*_corrupt_<horodatage>`, puis remplace progression et notes. Les clés API de l'appareil ne sont pas touchées.
+
 - **Progression, notes, réglages non secrets et historique du coach** : `SharedPreferences`, sur l'appareil. Les écritures se font dans l'ordre et les erreurs s'affichent dans un bandeau. Chaque section est chargée séparément, et les notes et messages du coach sont validés un par un. Si des données sont illisibles, même partiellement, la valeur d'origine est **copiée** sous une clé `*_corrupt_<horodatage>` avant toute réécriture. Les éléments lisibles restent chargés.
 - **Clés API** : `flutter_secure_storage`, un stockage chiffré adossé à l'Android Keystore. Les clés ne sont jamais journalisées et jamais incluses dans un rapport.
 - **Migration depuis la v1.0** : une ancienne clé stockée en clair est copiée dans le stockage sécurisé, puis relue. Elle n'est supprimée des préférences qu'après une relecture identique. En cas d'échec, elle reste utilisable, un avertissement s'affiche et une nouvelle tentative a lieu au démarrage suivant.
@@ -67,7 +71,16 @@ Sans modèle IA configuré ou joignable, le coach **ne génère rien**. Il affic
 
 ## Terminal simulé et Command Guard
 
-Le terminal imite Linux et n'exécute rien. Le **Command Guard** est une **règle pédagogique** du simulateur, pas une protection système, et sa liste de règles n'est pas exhaustive. Il analyse la commande réellement appelée, et non le texte brut.
+Le terminal est un **shell pédagogique écrit en Dart** qui agit uniquement sur un **système de fichiers virtuel en mémoire** (`lib/services/virtual_fs.dart`). Aucune commande n'est exécutée sur l'appareil, aucun fichier réel n'est lu ni écrit, et `ping`, `nmap`, `curl` ou `ssh` restent des simulations. Un test vérifie que le moteur n'importe pas `dart:io`.
+
+- **Arborescence** : `/home/learner` (notes, `logs/auth.log`, `logs/access.log`, scripts, rapport d'incident), `/etc` (`passwd`, `shadow`, `hosts`, `ssh/sshd_config`…), `/var/log`, `/var/www`, `/root`, `/tmp`.
+- **Commandes** : `pwd`, `cd`, `ls -la`, `cat`, `head`, `tail`, `grep` (`-i -v -n -c -l -o -E -r -w`), `wc`, `sort`, `uniq -c`, `cut`, `awk '{print $1}'`, `sed 's/a/b/g'`, `find` (`-name`, `-type`, `-user`, `-delete`, `-exec`), `tree`, `mkdir -p`, `touch`, `cp`, `mv`, `rm`, `rmdir`, `chmod`, `chown`, `file`, `stat`, `base64`, `history`, `env`, `whoami`, `id`, `sudo`…
+- **Shell** : `|`, `>`, `>>`, `<`, `2>/dev/null`, `2>&1`, `;`, `&&`, `||`, variables (`X=1`, `$HOME`, `$?`), `$(…)`, jokers (`*.log`), `~`.
+- **Droits simulés** : `/etc/shadow`, `/var/log/*` et `/root` sont refusés à `learner`. `sudo commande` ou `sudo -i` (puis `exit`) donnent les droits root.
+- **Scripts** : `bash script.sh`, ou `./script.sh` après `chmod +x`.
+- **`labreset`** restaure les fichiers d'origine. La session est conservée tant que l'application est ouverte, même en changeant d'onglet du Lab.
+
+Le **Command Guard** est une **règle pédagogique** du simulateur, pas une protection système, et sa liste de règles n'est pas exhaustive. Il analyse la commande réellement appelée, y compris chaque ligne d'un script. Désactivé, il laisse les protections « Linux » simulées s'appliquer (`rm -r /` refusé sans `--no-preserve-root`, droits) : seul le système de fichiers virtuel peut alors être effacé, et `labreset` le restaure.
 
 Commandes refusées :
 

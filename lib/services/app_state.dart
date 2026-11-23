@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../data/badges.dart';
 import '../data/course_library.dart';
+import '../data/learning_paths.dart';
 import '../models/coach_message.dart';
 import '../models/course.dart';
 import '../models/note.dart';
 import '../models/user_state.dart';
 import 'ai_service.dart';
+import 'backup_service.dart';
 import 'badge_service.dart';
 import 'secret_store.dart';
 import 'storage_service.dart';
@@ -495,9 +497,62 @@ Règles impératives :
     await _persistUser();
   }
 
+  /// Choisit le parcours (identifiant inconnu ignoré).
   Future<void> setPath(String path) async {
     await ready;
+    if (!LearningPaths.isValid(path)) return;
     user.selectedPath = path;
+    await _persistUser();
+  }
+
+  /// Parcours actuel (le parcours par défaut si la valeur est inconnue).
+  LearningPath get currentPath => LearningPaths.byId(user.selectedPath);
+
+  /// Cours terminés / total du parcours actuel.
+  ({int done, int total}) get pathProgress {
+    final courses = currentPath.courses;
+    return (
+      done: courses.where((c) => user.completedCourses.contains(c.id)).length,
+      total: courses.length,
+    );
+  }
+
+  /// Prochain cours conseillé : le premier cours non terminé du parcours,
+  /// sinon le premier cours non terminé de la bibliothèque, sinon null.
+  Course? get nextCourse {
+    bool open(Course c) => !user.completedCourses.contains(c.id);
+    for (final c in currentPath.courses) {
+      if (open(c)) return c;
+    }
+    for (final c in _courses.values) {
+      if (open(c)) return c;
+    }
+    return null;
+  }
+
+  // ------------------------------------------------- Premier lancement
+
+  /// Vrai au premier lancement : accueil non encore vu ET aucune donnée
+  /// existante (un utilisateur qui a déjà progressé ne le voit jamais).
+  bool get needsOnboarding {
+    if (!loaded || settings['onboardingDone'] == true) return false;
+    final hasData =
+        user.xp > 0 ||
+        user.name.isNotEmpty ||
+        user.completedCourses.isNotEmpty ||
+        user.quizResults.isNotEmpty ||
+        user.solvedChallenges.isNotEmpty ||
+        notes.isNotEmpty;
+    return !hasData;
+  }
+
+  /// Termine l'accueil : enregistre le prénom (facultatif) et le parcours.
+  Future<void> completeOnboarding({String name = '', String? path}) async {
+    await ready;
+    user.name = name.trim();
+    if (path != null && LearningPaths.isValid(path)) user.selectedPath = path;
+    settings = {...settings, 'onboardingDone': true};
+    await _saveSettings();
     await _persistUser();
   }
 
@@ -509,6 +564,64 @@ Règles impératives :
     await _persistUser();
     await _saveNotes();
     notifyListeners();
+  }
+
+  // ------------------------------------------------ Export / import
+
+  /// Export JSON : progression, notes, réglages non secrets et, si
+  /// [includeCoach], l'historique du coach. Aucune clé API.
+  Future<String> exportData({
+    bool includeCoach = false,
+    String appVersion = '',
+  }) async {
+    await ready;
+    _accumulateActiveTime();
+    return BackupFormat.encode(
+      user: user,
+      notes: notes,
+      settings: settings,
+      coachHistory: includeCoach ? coachMessages : null,
+      appVersion: appVersion,
+      now: _clock(),
+    );
+  }
+
+  /// Remplace la progression et les notes par celles de [backup]. Les
+  /// réglages exportables sont repris ; les clés API restent celles de cet
+  /// appareil. L'historique du coach n'est remplacé que s'il figure dans
+  /// l'export. Avant tout remplacement, l'état actuel est copié sous des
+  /// clés `*_corrupt_<horodatage>` : l'import est donc réversible.
+  /// Retourne null en cas de succès, sinon un message d'erreur.
+  Future<String?> importBackup(BackupPreview backup) async {
+    await ready;
+    await storage.flush();
+    try {
+      for (final key in [
+        StorageService.kUserState,
+        StorageService.kNotes,
+        StorageService.kSettings,
+        if (backup.coachHistory != null) StorageService.kCoachHistory,
+      ]) {
+        await storage.backupRaw(key);
+      }
+    } catch (_) {
+      return 'Import annulé : impossible de conserver une copie des données '
+          'actuelles. Rien n\'a été modifié.';
+    }
+    user = backup.user;
+    notes = List.of(backup.notes);
+    settings = {...settings, ...backup.settings};
+    if (backup.coachHistory != null) {
+      _coachGeneration++;
+      coachBusy = false;
+      coachMessages = List.of(backup.coachHistory!);
+      await _saveCoach();
+    }
+    _activeSince = _activeSince == null ? null : _clock();
+    await _saveSettings();
+    await _saveNotes();
+    await _persistUser();
+    return saveError;
   }
 
   // -------------------------------------------------------------- Notes

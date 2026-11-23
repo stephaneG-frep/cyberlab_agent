@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/app_state.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/root_shell.dart';
 import 'theme.dart';
 
@@ -28,7 +29,13 @@ class CyberLabApp extends StatelessWidget {
             theme: CyberLabTheme.light(),
             darkTheme: CyberLabTheme.dark(),
             themeMode: app.darkMode ? ThemeMode.dark : ThemeMode.light,
-            home: const RootShell(),
+            home: !app.loaded
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : app.needsOnboarding
+                ? const OnboardingScreen()
+                : const RootShell(),
           ),
         );
       },

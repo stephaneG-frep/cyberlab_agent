@@ -8,27 +8,60 @@ class TerminalScreen extends StatefulWidget {
   State<TerminalScreen> createState() => _TerminalScreenState();
 }
 
+/// Session du terminal conservée pendant la vie de l'application : passer
+/// à l'onglet SOC puis revenir ne réinitialise ni les fichiers ni l'écran.
+class TerminalSession {
+  TerminalSession._();
+  static TerminalEngine engine = TerminalEngine();
+  static final List<TermLine> lines = [];
+  static int _historyCursor = -1;
+
+  /// Repart de zéro (tests).
+  static void reset() {
+    engine = TerminalEngine();
+    lines.clear();
+    _historyCursor = -1;
+  }
+}
+
 class _TerminalScreenState extends State<TerminalScreen> {
-  final TerminalEngine _engine = TerminalEngine();
-  final List<_TermLine> _lines = [];
+  TerminalEngine get _engine => TerminalSession.engine;
+  List<TermLine> get _lines => TerminalSession.lines;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _banner();
+    if (_lines.isEmpty) _banner();
+    _scrollToBottom();
   }
 
   void _banner() {
     _lines.add(
-      _TermLine(
+      TermLine(
         text:
-            'CyberLab Terminal Simulé.\nCe terminal imite Linux : aucune commande n\'est exécutée sur votre appareil.\n'
-            'Command Guard : règle pédagogique qui refuse les commandes destructrices (rm -rf, dd of=…).\n'
-            'Tapez "help" pour la liste des commandes.\nTapez "man <cmd>" pour la documentation d\'une commande.',
-        type: _LineType.banner,
+            'CyberLab Terminal Simulé : un vrai shell pédagogique sur un système '
+            'de fichiers VIRTUEL. Rien n\'est exécuté sur votre appareil.\n'
+            'Explorez ~/logs, ~/notes.txt, /etc/passwd ; essayez les tubes : '
+            'grep "Failed" ~/logs/auth.log | wc -l\n'
+            'Command Guard : règle pédagogique qui refuse les commandes '
+            'destructrices (rm -rf, dd of=…).\n'
+            '« help » liste les commandes, « labreset » restaure les fichiers.',
+        type: TermLineType.banner,
       ),
+    );
+  }
+
+  void _recall() {
+    final h = _engine.history;
+    if (h.isEmpty) return;
+    var c = TerminalSession._historyCursor;
+    c = c <= 0 ? h.length - 1 : c - 1;
+    TerminalSession._historyCursor = c;
+    _controller.text = h[c];
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
     );
   }
 
@@ -40,18 +73,19 @@ class _TerminalScreenState extends State<TerminalScreen> {
   }
 
   void _run(String input) {
+    TerminalSession._historyCursor = -1;
     setState(() {
       _lines.add(
-        _TermLine(text: '${_engine.prompt} $input', type: _LineType.input),
+        TermLine(text: '${_engine.prompt} $input', type: TermLineType.input),
       );
       final result = _engine.run(input);
       if (result.clear) {
         _lines.clear();
       } else if (result.output.isNotEmpty) {
         _lines.add(
-          _TermLine(
+          TermLine(
             text: result.output,
-            type: result.blocked ? _LineType.warning : _LineType.output,
+            type: result.blocked ? TermLineType.warning : TermLineType.output,
           ),
         );
       }
@@ -117,10 +151,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 itemBuilder: (context, i) {
                   final line = _lines[i];
                   final color = switch (line.type) {
-                    _LineType.input => Colors.lightBlueAccent,
-                    _LineType.warning => Colors.orange,
-                    _LineType.banner => Colors.grey,
-                    _LineType.output => Colors.greenAccent,
+                    TermLineType.input => Colors.lightBlueAccent,
+                    TermLineType.warning => Colors.orange,
+                    TermLineType.banner => Colors.grey,
+                    TermLineType.output => Colors.greenAccent,
                   };
                   return SelectableText(
                     line.text,
@@ -140,15 +174,21 @@ class _TerminalScreenState extends State<TerminalScreen> {
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                Text(
-                  '${_engine.prompt} ',
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    color: Colors.greenAccent,
+                Flexible(
+                  child: Text(
+                    '${_engine.prompt} ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      color: Colors.greenAccent,
+                    ),
                   ),
                 ),
                 Expanded(
+                  flex: 2,
                   child: TextField(
+                    key: const ValueKey('terminal-input'),
                     controller: _controller,
                     autofocus: false,
                     style: const TextStyle(
@@ -172,6 +212,12 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     },
                   ),
                 ),
+                IconButton(
+                  tooltip: 'Commande précédente',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _recall,
+                  icon: const Icon(Icons.history, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -181,10 +227,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
   }
 }
 
-enum _LineType { input, output, warning, banner }
+enum TermLineType { input, output, warning, banner }
 
-class _TermLine {
+class TermLine {
   final String text;
-  final _LineType type;
-  _TermLine({required this.text, required this.type});
+  final TermLineType type;
+  TermLine({required this.text, required this.type});
 }
