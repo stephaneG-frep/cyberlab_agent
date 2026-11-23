@@ -98,6 +98,14 @@ Course _computer() => Course(
       '0',
       'Le CPU (processeur) fait les calculs.',
     ]),
+    q(const [
+      'q3',
+      "Quel logiciel initialise le matériel au démarrage ?",
+      'qcm',
+      "Le BIOS/UEFI|Le navigateur|L'antivirus|Le pilote réseau",
+      '0',
+      "Il charge ensuite le système d'exploitation.",
+    ]),
   ],
   exercises: [
     ex(
@@ -169,6 +177,22 @@ Course _os() => Course(
       '0',
       'Le noyau gère le matériel et tourne en mode privilégié.',
     ]),
+    q(const [
+      'q2',
+      "Comment un programme normal accède-t-il au matériel ?",
+      'qcm',
+      "En passant seul en mode noyau|En écrivant dans le BIOS|Par un appel système au noyau|Par le navigateur web",
+      '2',
+      "Le mode utilisateur est restreint : il demande au noyau.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une faille du noyau est particulièrement grave.",
+      'tf',
+      'Vrai',
+      null,
+      "Le noyau est privilégié : sa compromission peut donner le contrôle total.",
+    ]),
   ],
   exercises: [
     ex(
@@ -230,6 +254,22 @@ Course _files() => Course(
       'un conteneur de fichiers|un type de processeur|un protocole|une carte réseau',
       '0',
       'Le dossier organise le stockage.',
+    ]),
+    q(const [
+      'q2',
+      "Que dit la règle de sauvegarde 3-2-1 ?",
+      'qcm',
+      "3 copies, 2 supports, 1 hors site|3 disques, 2 clés, 1 mot de passe|3 jours, 2 semaines, 1 mois|3 sites, 2 copies, 1 support",
+      '0',
+      "Elle protège des pannes comme des rançongiciels.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : l'extension d'un fichier suffit à connaître son vrai type.",
+      'tf',
+      'Faux',
+      null,
+      "On vérifie son contenu (octets magiques).",
     ]),
   ],
   exercises: [
@@ -293,6 +333,22 @@ Course _processes() => Course(
       '0',
       'Le programme est du code stocké ; le processus est cette exécution active.',
     ]),
+    q(const [
+      'q2',
+      "Que partagent les threads d'un même processus ?",
+      'qcm',
+      "Leur numéro PID respectif|Un mot de passe commun|La mémoire du processus|Le même fichier exécutable seulement",
+      '2',
+      "D'où le risque de « course » quand ils modifient les mêmes données.",
+    ]),
+    q(const [
+      'q3',
+      "Avec quels droits agit un processus ?",
+      'qcm',
+      "Ceux de l'administrateur, toujours|Ceux du fichier le plus récent|Aucun, il est toujours isolé|Ceux de l'utilisateur qui l'a lancé",
+      '3',
+      "D'où l'intérêt du moindre privilège.",
+    ]),
   ],
   exercises: [
     ex(
@@ -322,7 +378,7 @@ Course _memory() => Course(
       ),
       list(
         '- **Registres / cache CPU** : ultra-rapides, très petites.\n'
-        '- **RAM** : rapide, temporaire, volait au redémarrage.\n'
+        '- **RAM** : rapide, temporaire, effacée à l\'extinction.\n'
         '- **Disque (SSD/HDD)** : lent, permanent.',
       ),
       text(
@@ -362,6 +418,22 @@ Course _memory() => Course(
       'la RAM|le disque|le SSD|le CD-ROM',
       '0',
       'La RAM est volatile, elle se vide au redémarrage.',
+    ]),
+    q(const [
+      'q2',
+      "Classez de la plus rapide à la plus lente :",
+      'qcm',
+      "cache CPU, RAM, disque|RAM, disque, cache CPU|disque, RAM, cache CPU|RAM, cache CPU, disque",
+      '0',
+      "Plus la mémoire est grande, plus elle est lente.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : la RAM peut contenir des mots de passe en clair.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est pourquoi l'analyse mémoire est une discipline de la forensique.",
     ]),
   ],
   exercises: [
@@ -428,6 +500,22 @@ Course _users() => Course(
       '0',
       'L\'authentification prouve votre identité ; l\'autorisation définit vos droits.',
     ]),
+    q(const [
+      'q2',
+      "Pourquoi ne pas travailler au quotidien en administrateur ?",
+      'qcm',
+      "Les mises à jour seraient bloquées|Le système serait plus lent|Un malware agirait avec tous les droits|Le mot de passe expirerait",
+      '2',
+      "Un compte normal limite les dégâts d'une erreur ou d'un malware.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : l'autorisation décide ce que vous pouvez faire une fois identifié.",
+      'tf',
+      'Vrai',
+      null,
+      "L'authentification dit qui vous êtes ; l'autorisation, ce qui vous est permis.",
+    ]),
   ],
   exercises: [
     ex(
@@ -493,6 +581,22 @@ Course _permissions() => Course(
       '0',
       'On ne donne que ce qui est nécessaire.',
     ]),
+    q(const [
+      'q2',
+      "Dans le modèle RBAC, les droits dépendent...",
+      'qcm',
+      "du rôle de l'utilisateur|de l'heure de connexion|du propriétaire du fichier|du type d'ordinateur",
+      '0',
+      "RBAC : Role-Based Access Control.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : SELinux applique un contrôle d'accès obligatoire (MAC).",
+      'tf',
+      'Vrai',
+      null,
+      "Des règles centrales s'imposent, même au propriétaire du fichier.",
+    ]),
   ],
   exercises: [
     ex(
@@ -537,7 +641,7 @@ Course _networkIntro() => Course(
     ]),
     sec('Pourquoi le réseau est central en sécurité', [
       text(
-        '90% des cyberattaques passent par le réseau : connexions, ports ouverts, services exposés, trafic malveillant. Comprendre le réseau est LA compétence fondamentale en cybersécurité, pour attaquer comme pour défendre.',
+        'La plupart des cyberattaques passent par le réseau : connexions, ports ouverts, services exposés, trafic malveillant. Comprendre le réseau est LA compétence fondamentale en cybersécurité, pour attaquer comme pour défendre.',
       ),
     ]),
     sec('La communication en couches', [
@@ -560,6 +664,22 @@ Course _networkIntro() => Course(
       'un réseau local|le processeur|l\'ordinateur|un virus',
       '0',
       'LAN = Local Area Network, réseau local.',
+    ]),
+    q(const [
+      'q2',
+      "Quel équipement relie votre réseau local à Internet ?",
+      'qcm',
+      "Le serveur DNS|La carte réseau|Le routeur (box)|Le commutateur",
+      '2',
+      "Il fait le lien entre le LAN et Internet, grâce au NAT.",
+    ]),
+    q(const [
+      'q3',
+      "Comment appelle-t-on un réseau étendu comme Internet ?",
+      'qcm',
+      "LAN|PAN|MAN|WAN",
+      '3',
+      "LAN : local ; PAN : très petit ; MAN : une ville.",
     ]),
   ],
   exercises: [
@@ -635,6 +755,22 @@ Course _ip() => Course(
       '0',
       '127.0.0.1 (localhost) désigne votre propre machine.',
     ]),
+    q(const [
+      'q2',
+      "Laquelle de ces adresses est privée ?",
+      'qcm',
+      "10.20.30.40|8.8.4.4|198.51.100.7|172.40.1.1",
+      '0',
+      "10.0.0.0/8 est privée ; 172.16 à 172.31 le sont aussi, mais pas 172.40.",
+    ]),
+    q(const [
+      'q3',
+      "Dans 192.168.1.0/24, combien d'octets désignent le réseau ?",
+      'qcm',
+      "1|3|2|4",
+      '1',
+      "/24 = 24 bits = 3 octets ; le dernier désigne la machine.",
+    ]),
   ],
   exercises: [
     ex(
@@ -708,6 +844,22 @@ Course _ipv4() => Course(
       '0',
       'IPv4 = 4 octets (32 bits).',
     ]),
+    q(const [
+      'q2',
+      "Que signifie une adresse en 169.254.x.x ?",
+      'qcm',
+      "La machine est un serveur web|Le pare-feu bloque la machine|Aucun serveur DHCP n'a répondu|La connexion est chiffrée",
+      '2',
+      "C'est une adresse APIPA, attribuée par défaut.",
+    ]),
+    q(const [
+      'q3',
+      "Que désigne le suffixe /32 ?",
+      'qcm',
+      "Un réseau de 32 machines|Le port numéro 32|Un réseau très grand|Une seule machine",
+      '3',
+      "Les 32 bits sont fixés : il ne reste qu'une adresse.",
+    ]),
   ],
   exercises: [
     ex(
@@ -775,6 +927,22 @@ Course _ipv6() => Course(
       '0',
       '::1 est l\'équivalent IPv6 de 127.0.0.1.',
     ]),
+    q(const [
+      'q2',
+      "Combien de bits compte une adresse IPv6 ?",
+      'qcm',
+      "128|32|64|256",
+      '0',
+      "Contre 32 bits pour IPv4.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un pare-feu réglé seulement pour IPv4 peut être contourné par IPv6.",
+      'tf',
+      'Vrai',
+      null,
+      "En double pile, il faut filtrer les deux protocoles.",
+    ]),
   ],
   exercises: [
     ex(
@@ -840,6 +1008,22 @@ Course _mac() => Course(
       '0',
       'La MAC est l\'identifiant physique de la carte.',
     ]),
+    q(const [
+      'q2',
+      "Quel protocole relie une adresse IP à une adresse MAC sur le réseau local ?",
+      'qcm',
+      "DNS|NAT|ARP|FTP",
+      '2',
+      "ARP demande « qui a cette IP ? » et reçoit la MAC.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : le filtrage par adresse MAC est une protection fiable à lui seul.",
+      'tf',
+      'Faux',
+      null,
+      "Une adresse MAC s'usurpe facilement.",
+    ]),
   ],
   exercises: [
     ex(
@@ -895,7 +1079,7 @@ Course _ports() => Course(
     ]),
     sec('TCP vs UDP et l\'état des ports', [
       text(
-        'Les ports existent en TCP et UDP (protozoïques de transport). Un port peut être "open" (service qui répond), "closed" (pas de service, mais accessible) ou "filtered" (bloqué par un firewall). Ces états sont ce qu\'analyse nmap.',
+        'Les ports existent en TCP et UDP (protocoles de transport). Un port peut être "open" (service qui répond), "closed" (pas de service, mais accessible) ou "filtered" (bloqué par un firewall). Ces états sont ce qu\'analyse nmap.',
       ),
     ]),
   ],
@@ -921,6 +1105,14 @@ Course _ports() => Course(
       'Vrai',
       null,
       'Tout scan sans autorisation peut être illégal.',
+    ]),
+    q(const [
+      'q3',
+      "Que signifie l'état « filtered » d'un port ?",
+      'qcm',
+      "Un service répond|Un pare-feu bloque l'accès|Aucun service n'écoute|Le trafic est chiffré",
+      '1',
+      "open : un service répond ; closed : accessible, mais aucun service.",
     ]),
   ],
   exercises: [
@@ -996,6 +1188,22 @@ Course _protocols() => Course(
       '0',
       'HTTP et DNS sont des protocoles de la couche application.',
     ]),
+    q(const [
+      'q2',
+      "Dans quelle couche se trouvent TCP et UDP ?",
+      'qcm',
+      "Transport|Application|Liaison|Réseau",
+      '0',
+      "Au-dessus d'IP (réseau) et sous HTTP (application).",
+    ]),
+    q(const [
+      'q3',
+      "Combien de couches compte le modèle OSI ?",
+      'qcm',
+      "4|7|5|3",
+      '1',
+      "TCP/IP en compte 4.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1069,6 +1277,22 @@ Course _tcp() => Course(
       'SYN, SYN-ACK, ACK|SYN, ACK, FIN|GET, POST, HEAD|hello, ok, bye',
       '0',
       'Le three-way handshake est SYN → SYN-ACK → ACK.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait TCP lorsqu'un segment est perdu ?",
+      'qcm',
+      "Il l'ignore|Il ferme la connexion|Il le retransmet|Il passe en UDP",
+      '2',
+      "TCP garantit l'arrivée et l'ordre des données.",
+    ]),
+    q(const [
+      'q3',
+      "Sur quoi repose une attaque SYN flood ?",
+      'qcm',
+      "Deviner un mot de passe|Modifier les réponses du serveur DNS|Déchiffrer le trafic d'un client|Saturer de demandes de connexion",
+      '3',
+      "Le serveur s'épuise à attendre des connexions jamais terminées.",
     ]),
   ],
   exercises: [
@@ -1144,6 +1368,22 @@ Course _udp() => Course(
       '0',
       'UDP privilégie la vitesse au détriment de la fiabilité.',
     ]),
+    q(const [
+      'q2',
+      "Quel service utilise couramment UDP ?",
+      'qcm',
+      "Le DNS|Le SSH|Le HTTP/1.1|Le FTP",
+      '0',
+      "La rapidité prime pour une résolution de nom.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : UDP garantit l'ordre d'arrivée des paquets.",
+      'tf',
+      'Faux',
+      null,
+      "Ni l'arrivée, ni l'ordre, ni l'absence de doublons.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1200,7 +1440,7 @@ Course _dns() => Course(
     ]),
     sec('DNS et la sécurité', [
       text(
-        'Le DNS est une surface critique : DNS spoofing (empoisonnement de cache), DNS tunnelling (exfiltration), phishing (sites d\'apparence similaire), et il enquêtrice sur les résolutions (le SIEM y porte attention). Le DNS chiffré (DoH/DoT) protège les requêtes.',
+        'Le DNS est une surface critique : DNS spoofing (empoisonnement de cache), DNS tunnelling (exfiltration), phishing (sites d\'apparence similaire) ; c\'est pourquoi un SIEM surveille les résolutions. Le DNS chiffré (DoH/DoT) protège les requêtes.',
       ),
       warn(
         'Un outil comme nslookup/dig interroge le DNS pour vérifier une résolution. Utilisez-le pour diagnostiquer des problèmes, pas pour attaquer.',
@@ -1221,6 +1461,22 @@ Course _dns() => Course(
       "traduire un nom de domaine en IP|attribuer une adresse IP à un poste|traduire une adresse IP en adresse MAC|chiffrer les échanges avec un site",
       '0',
       'DNS = résolution nom → IP.',
+    ]),
+    q(const [
+      'q2',
+      "Quel enregistrement indique le serveur de messagerie ?",
+      'qcm',
+      "AAAA|CNAME|MX|NS",
+      '2',
+      "MX pour Mail eXchanger.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : DoH et DoT chiffrent les requêtes DNS.",
+      'tf',
+      'Vrai',
+      null,
+      "DNS over HTTPS et DNS over TLS.",
     ]),
   ],
   exercises: [
@@ -1288,6 +1544,22 @@ Course _dhcp() => Course(
       "Discover, Offer, Request, Ack|Request, Response, Accept, Close|Discover, Request, Reply, Release|Offer, Discover, Ack, Request",
       '0',
       'DORA = Discover, Offer, Request, Ack.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce qu'un bail DHCP ?",
+      'qcm',
+      "Une IP prêtée pour une durée limitée|Un contrat avec le fournisseur d'accès|Une IP fixe saisie à la main|Une clé de chiffrement Wi-Fi",
+      '0',
+      "À expiration, la machine renouvelle sa demande.",
+    ]),
+    q(const [
+      'q3',
+      "Quel est le risque d'un serveur DHCP malveillant ?",
+      'qcm',
+      "Effacer les fichiers des postes|Imposer un faux DNS ou une fausse passerelle|Deviner les mots de passe Wi-Fi|Augmenter le débit de la connexion des attaquants",
+      '1',
+      "Le trafic des victimes peut alors être détourné.",
     ]),
   ],
   exercises: [
@@ -1367,6 +1639,22 @@ Course _http() => Course(
       '0',
       'POST envoie des données ; GET récupère.',
     ]),
+    q(const [
+      'q2',
+      "Que signifie un code de statut 5xx ?",
+      'qcm',
+      "Une erreur du client|Une redirection|Une erreur du serveur|Un succès",
+      '2',
+      "2xx succès, 3xx redirection, 4xx client, 5xx serveur.",
+    ]),
+    q(const [
+      'q3',
+      "Quelle méthode renvoie les en-têtes sans le corps ?",
+      'qcm',
+      "GET|POST|PUT|HEAD",
+      '3',
+      "HEAD se comporte comme GET, sans le contenu.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1431,6 +1719,22 @@ Course _https() => Course(
       'la connexion (chiffrement)|la légitimité du site|la vitesse|le disque dur',
       '0',
       'HTTPS chiffre la connexion. Il ne rend pas le site légitime.',
+    ]),
+    q(const [
+      'q2',
+      "Que vérifie le navigateur dans le certificat ?",
+      'qcm',
+      "Sa validité et le nom de domaine|L'honnêteté du propriétaire du site|La vitesse du serveur web|L'âge du nom de domaine",
+      '0',
+      "Il s'assure de parler au bon serveur.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un site de phishing peut afficher le cadenas HTTPS.",
+      'tf',
+      'Vrai',
+      null,
+      "HTTPS protège la connexion, pas l'honnêteté du site.",
     ]),
   ],
   exercises: [
@@ -1509,6 +1813,22 @@ Course _ssh() => Course(
       '0',
       'SSH chiffre toute la session, pas telnet.',
     ]),
+    q(const [
+      'q2',
+      "Quelle authentification SSH est la plus sûre ?",
+      'qcm',
+      "Par mot de passe partagé entre admins|Par adresse IP uniquement|Par clés publique et privée|Par nom d'utilisateur",
+      '2',
+      "Une clé ne se devine pas par force brute.",
+    ]),
+    q(const [
+      'q3',
+      "Sur quel port SSH écoute-t-il par défaut ?",
+      'qcm',
+      "23|21|25|22",
+      '3',
+      "23 est celui de telnet, 21 de FTP, 25 de SMTP.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1578,6 +1898,22 @@ Course _ftp() => Course(
       '0',
       'FTP transmet identifiants et données en clair.',
     ]),
+    q(const [
+      'q2',
+      "Sur quoi s'appuie SFTP ?",
+      'qcm',
+      "SSH|HTTP|SMTP|Telnet",
+      '0',
+      "À ne pas confondre avec FTPS, qui est FTP sur TLS.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : FTPS est FTP protégé par TLS.",
+      'tf',
+      'Vrai',
+      null,
+      "SFTP, lui, passe par SSH.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1645,6 +1981,22 @@ Course _smtp() => Course(
       'envoyer des emails|lire les emails reçus|naviguer sur le web|traduire des domaines',
       '0',
       'SMTP achémine/envoie le courrier.',
+    ]),
+    q(const [
+      'q2',
+      "Quel protocole synchronise les e-mails entre plusieurs appareils ?",
+      'qcm',
+      "SMTP|POP3|IMAP|SNMP",
+      '2',
+      "POP3 télécharge, IMAP synchronise, SMTP envoie.",
+    ]),
+    q(const [
+      'q3',
+      "À quoi servent SPF, DKIM et DMARC ?",
+      'qcm',
+      "À chiffrer les pièces jointes|À accélérer l'envoi des messages|À archiver les messages reçus|À vérifier l'expéditeur d'un e-mail",
+      '3',
+      "Ils limitent l'usurpation de domaine.",
     ]),
   ],
   exercises: [
@@ -1715,6 +2067,22 @@ Course _vpn() => Course(
       "créer un tunnel chiffré vers un réseau|accélérer la connexion à Internet|supprimer les virus du trafic reçu|chiffrer le contenu du disque dur local",
       '0',
       'Le VPN crée un tunnel chiffré entre vous et un réseau/serveur.',
+    ]),
+    q(const [
+      'q2',
+      "Quel type de VPN relie deux sites d'une organisation ?",
+      'qcm',
+      "Le VPN site à site|Le VPN d'accès distant|Le VPN personnel|Le VPN de navigateur",
+      '0',
+      "L'accès distant relie, lui, un employé au réseau.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un VPN protège du phishing.",
+      'tf',
+      'Faux',
+      null,
+      "Il chiffre le trafic jusqu'au serveur VPN, rien de plus.",
     ]),
   ],
   exercises: [
@@ -1791,6 +2159,22 @@ Course _firewall() => Course(
       '0',
       'Le firewall filtre le trafic réseau.',
     ]),
+    q(const [
+      'q2',
+      "Que fait iptables -P INPUT DROP ?",
+      'qcm',
+      "Autorise par défaut le trafic entrant|Affiche les règles en vigueur|Refuse par défaut le trafic entrant|Supprime toutes les règles",
+      '2',
+      "-P fixe la politique par défaut de la chaîne.",
+    ]),
+    q(const [
+      'q3',
+      "Sur quels critères un pare-feu filtre-t-il les paquets ?",
+      'qcm',
+      "Couleur et taille des pages|Nom et âge de l'utilisateur|Marque de l'ordinateur|IP, port et protocole",
+      '3',
+      "Il applique ensuite une politique : accepter ou refuser.",
+    ]),
   ],
   exercises: [
     ex(
@@ -1852,6 +2236,22 @@ Course _nat() => Course(
       "faire partager une IP publique à plusieurs machines (privées)|attribuer une IP publique différente à chaque machine privée|chiffrer le trafic entre les machines du réseau privé|traduire les noms de domaine en adresses IP privées",
       '0',
       'NAT traduit et fait partager l\'IP publique.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'ajoute le PAT au NAT simple ?",
+      'qcm',
+      "L'utilisation des ports|Le chiffrement du trafic|Un nom de domaine|Un filtrage antivirus",
+      '0',
+      "Les ports distinguent les machines derrière une même IP publique.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : le NAT remplace un pare-feu.",
+      'tf',
+      'Faux',
+      null,
+      "Il masque les machines, mais il faut filtrer explicitement.",
     ]),
   ],
   exercises: [

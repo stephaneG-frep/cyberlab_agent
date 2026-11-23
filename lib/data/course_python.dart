@@ -94,6 +94,14 @@ Course _pySyntax() => Course(
       '0',
       '"Alice" entre guillemets est une chaîne (str).',
     ]),
+    q(const [
+      'q3',
+      "Comment écrit-on un commentaire en Python ?",
+      'qcm',
+      "# commentaire|// commentaire|-- commentaire|/* commentaire */",
+      '0',
+      "Tout ce qui suit # sur la ligne est ignoré.",
+    ]),
   ],
   exercises: [
     ex(
@@ -176,6 +184,22 @@ Course _pyVariables() => Course(
       "insérer port dans une chaîne|convertir port en nombre entier|déclarer une fonction nommée port|afficher le type de port",
       '0',
       'Les f-strings insèrent des variables dans un texte.',
+    ]),
+    q(const [
+      'q2',
+      "Que renvoie input() ?",
+      'qcm',
+      "Un nombre entier si possible|Un booléen|Une chaîne de caractères|Une liste",
+      '2',
+      "Il faut convertir avec int() pour calculer.",
+    ]),
+    q(const [
+      'q3',
+      "Que vaut 10 // 3 ?",
+      'qcm',
+      "1|3.33|30|3",
+      '3',
+      "// est la division entière ; % donne le reste.",
     ]),
   ],
   exercises: [
@@ -260,6 +284,22 @@ Course _pyConditions() => Course(
       '==|=|= =|is égal',
       '0',
       '== teste l\'égalité, = affecte.',
+    ]),
+    q(const [
+      'q2',
+      "Que signifie != ?",
+      'qcm',
+      "Différent de|Égal à|Inférieur à|Contenu dans",
+      '0',
+      "== teste l'égalité.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une liste vide est considérée comme fausse dans un if.",
+      'tf',
+      'Vrai',
+      null,
+      "D'où l'écriture : if not liste.",
     ]),
   ],
   exercises: [
@@ -353,6 +393,22 @@ Course _pyLoops() => Course(
       '0',
       'range(5) va de 0 à 4 inclus.',
     ]),
+    q(const [
+      'q2',
+      "Que fait break dans une boucle ?",
+      'qcm',
+      "Il passe au tour suivant|Il relance la boucle|Il sort de la boucle|Il arrête le programme",
+      '2',
+      "continue passe au tour suivant.",
+    ]),
+    q(const [
+      'q3',
+      "Que génère range(2, 6) ?",
+      'qcm',
+      "2, 3, 4, 5, 6|3, 4, 5, 6|2, 6|2, 3, 4, 5",
+      '3',
+      "La borne de fin est exclue.",
+    ]),
   ],
   exercises: [
     ex(
@@ -429,6 +485,22 @@ Course _pyFunctions() => Course(
       '0',
       'return renvoie une valeur à l\'appelant.',
     ]),
+    q(const [
+      'q2',
+      "Que renvoie return ip, port ?",
+      'qcm',
+      "Un tuple de deux valeurs|Seulement la valeur ip|Une chaîne ip,port|Un dictionnaire",
+      '0',
+      "On peut le récupérer avec a, b = extraire(...).",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : une variable définie dans une fonction est locale à cette fonction.",
+      'tf',
+      'Vrai',
+      null,
+      "On préfère paramètres et return aux variables globales.",
+    ]),
   ],
   exercises: [
     ex(
@@ -456,6 +528,7 @@ Course _pyFiles() => Course(
       code(
         'with open("auth.log") as f:\n'
         '    contenu = f.read()        # tout\n'
+        '    f.seek(0)                  # revenir au début, sinon plus rien à lire\n'
         '    lignes = f.readlines()    # liste de lignes',
         label: 'Lecture',
       ),
@@ -519,6 +592,14 @@ Course _pyFiles() => Course(
       '"a"|"w"|"r"|"x"',
       '0',
       '"a" (append) ajoute sans écraser.',
+    ]),
+    q(const [
+      'q3',
+      "Pourquoi utiliser with open(...) ?",
+      'qcm',
+      "Le fichier est lu deux fois plus vite|Le fichier est fermé automatiquement|Le fichier est chiffré à l'ouverture|Le fichier est créé s'il n'existe pas",
+      '1',
+      "La fermeture a lieu même en cas d'erreur.",
     ]),
   ],
   exercises: [
@@ -607,6 +688,14 @@ Course _pyJson() => Course(
       '0',
       'json.load() lit et décode depuis un fichier.',
     ]),
+    q(const [
+      'q3',
+      "Que fait json.dumps(data) ?",
+      'qcm',
+      "Lit un fichier JSON sur le disque|Supprime les clés vides du dict|Convertit un dict en texte JSON|Envoie les données à une API",
+      '2',
+      "dumps encode en chaîne ; loads décode.",
+    ]),
   ],
   exercises: [
     ex(
@@ -656,7 +745,8 @@ Course _pyRegex() => Course(
         '    print(ip.group())    # 192.168.1.42\n'
         '\n'
         '# toutes les correspondances\n'
-        'ips = re.findall(r"\\d{1,3}(\\.\\d{1,3}){3}", texte)\n'
+        '# (?:...) : groupe non capturant, sinon findall ne renvoie que le groupe\n'
+        'ips = re.findall(r"\\d{1,3}(?:\\.\\d{1,3}){3}", texte)\n'
         'print(ips)',
         label: 're.search/findall',
       ),
@@ -692,6 +782,22 @@ Course _pyRegex() => Course(
       "un ou plusieurs chiffres|un seul chiffre exactement|une ou plusieurs lettres|zéro ou plusieurs espaces",
       '0',
       '\\d = chiffre, + = un ou plusieurs.',
+    ]),
+    q(const [
+      'q2',
+      "Que signifie ^ au début d'un motif ?",
+      'qcm',
+      "Fin de ligne|Négation du motif|Début de ligne|Un caractère quelconque",
+      '2',
+      "\$ marque la fin de ligne.",
+    ]),
+    q(const [
+      'q3',
+      "Pourquoi écrire les motifs avec r\"...\" ?",
+      'qcm',
+      "Pour ignorer majuscules et minuscules|Pour accélérer la recherche|Pour rendre le motif optionnel|Pour ne pas interpréter les antislashs",
+      '3',
+      "r indique une chaîne brute.",
     ]),
   ],
   exercises: [
@@ -781,6 +887,22 @@ Course _pySockets() => Course(
       '0',
       'connect_ex renvoie 0 si la connexion réussit (port ouvert).',
     ]),
+    q(const [
+      'q2',
+      "À quoi sert s.settimeout(1) ?",
+      'qcm',
+      "À limiter l'attente à 1 seconde|À ouvrir une seule connexion|À envoyer 1 octet à la fois|À fermer le socket après usage",
+      '0',
+      "Sans délai, un port filtré bloquerait le programme.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : ce mini-scanner peut viser n'importe quelle adresse d'Internet.",
+      'tf',
+      'Faux',
+      null,
+      "Uniquement localhost, votre machine ou un lab autorisé.",
+    ]),
   ],
   exercises: [
     ex(
@@ -866,6 +988,22 @@ Course _pyHttp() => Course(
       '0',
       'r.status_code contient le code HTTP.',
     ]),
+    q(const [
+      'q2',
+      "Comment envoyer du JSON avec requests ?",
+      'qcm',
+      "requests.get(url, body={...})|requests.json(url, post={...})|requests.post(url, json={...})|requests.send(url, text={...})",
+      '2',
+      "Le paramètre json encode les données et règle l'en-tête.",
+    ]),
+    q(const [
+      'q3',
+      "Que contient r.text ?",
+      'qcm',
+      "Le code de statut|Les en-têtes|L'adresse du serveur|Le corps de la réponse",
+      '3',
+      "r.headers contient les en-têtes.",
+    ]),
   ],
   exercises: [
     ex(
@@ -949,6 +1087,22 @@ Course _pyHashing() => Course(
       'SHA256|MD5|SHA1|CRC32',
       '0',
       'SHA256 est sûr ; MD5 et SHA1 sont cassés.',
+    ]),
+    q(const [
+      'q2',
+      "Pourquoi lire le fichier par blocs pour le hacher ?",
+      'qcm',
+      "Pour ne pas le charger entier en mémoire|Pour obtenir plusieurs hash différents|Pour chiffrer chaque bloc lu|Pour ignorer les lignes vides",
+      '0',
+      "Le résultat est le même, mais un gros fichier ne sature pas la RAM.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : modifier un seul bit d'un fichier change son SHA-256.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est ce qui permet de vérifier l'intégrité.",
     ]),
   ],
   exercises: [
@@ -1035,6 +1189,22 @@ Course _pyAnalyzer() => Course(
       "collections.Counter|itertools.permutations|collections.namedtuple|functools.partial",
       '0',
       'Counter à compter les occurrences d\'éléments.',
+    ]),
+    q(const [
+      'q2',
+      "Que renvoie Counter(ips).most_common(5) ?",
+      'qcm',
+      "Les 5 premières IP du fichier|Les IP vues au moins 5 fois|Les 5 IP les plus fréquentes|Le nombre total d'IP",
+      '2',
+      "Chaque IP est renvoyée avec son nombre d'occurrences.",
+    ]),
+    q(const [
+      'q3',
+      "Que gère except FileNotFoundError ?",
+      'qcm',
+      "Une ligne mal formatée|Une adresse IP invalide|Un fichier trop volumineux|L'absence du fichier de log",
+      '3',
+      "Le script affiche un message au lieu de planter.",
     ]),
   ],
   exercises: [

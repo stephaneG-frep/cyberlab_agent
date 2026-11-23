@@ -51,6 +51,17 @@ void main() {
     }
   });
 
+  test('chaque cours a au moins 3 questions, aux identifiants uniques', () {
+    for (final c in CourseLibrary.all) {
+      expect(c.quiz.length, greaterThanOrEqualTo(3), reason: c.id);
+      expect(c.quiz.map((q) => q.id).toSet().length, c.quiz.length);
+      expect(c.quiz.map((q) => q.question).toSet().length, c.quiz.length);
+      for (final q in c.quiz) {
+        expect(q.explanation.trim(), isNotEmpty, reason: '${c.id}/${q.id}');
+      }
+    }
+  });
+
   test('options toutes différentes et non vides', () {
     for (final (id, q) in qcm) {
       final o = q.options!.map((s) => s.trim().toLowerCase()).toList();

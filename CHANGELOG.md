@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0] - 2026-11-23
+
+### Quiz
+- **159 questions** ajoutées : chaque cours en a désormais au moins 3 (72 cours n'en avaient qu'une, 15 en avaient deux). Une seule bonne réponse ne suffit plus à terminer un cours. Les cours déjà terminés le restent.
+
+### Corrections du contenu des cours
+- Python : la regex d'extraction d'IP ne renvoyait que `.42` avec `findall` (groupe capturant) ; `readlines()` après `read()` renvoyait une liste vide.
+- Bash : trois extractions d'IP fausses dans les exemples de logs (mauvais champ), et `{date}` au lieu de `$(date)`.
+- CVSS : élevé de 7,0 à 8,9, critique à partir de 9,0.
+- CORS : la combinaison `*` et Allow-Credentials est refusée par les navigateurs ; le risque est la réflexion de l'origine avec les cookies.
+- Deux « 90 % » sans source retirés ; plusieurs passages erronés ou illisibles (RAM, DNS, cookie de session, ports).
+
 ## [1.6.1] - 2026-11-23
 
 ### Quiz

@@ -80,6 +80,22 @@ Course _bashIntro() => Course(
       '0',
       'Le shebang déclare l\'interpréteur.',
     ]),
+    q(const [
+      'q2',
+      "Quelle commande rend un script exécutable ?",
+      'qcm',
+      "chown +x script.sh|bash -x script.sh|chmod +x script.sh|echo +x script.sh",
+      '2',
+      "Le droit x permet ensuite ./script.sh.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : bash script.sh fonctionne même si le script n'a pas le droit x.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est bash qui lit le fichier ; seul ./script.sh exige le droit x.",
+    ]),
   ],
   exercises: [
     ex(
@@ -171,6 +187,14 @@ Course _bashVariables() => Course(
       '\$x littéralement|la valeur de x|une erreur|rien',
       '0',
       'Les guillemets simples affichent littéralement.',
+    ]),
+    q(const [
+      'q3',
+      "Que contient la variable \$? ?",
+      'qcm',
+      "Le nombre d'arguments passés au script|Le nom du script en cours d'exécution|Le code de retour de la dernière commande|Le numéro (PID) du processus du script",
+      '2',
+      "0 signifie succès.",
     ]),
   ],
   exercises: [
@@ -277,6 +301,14 @@ Course _bashConditions() => Course(
       '0',
       'if se termine par fi (if inversé).',
     ]),
+    q(const [
+      'q3',
+      "Que teste [ -d chemin ] ?",
+      'qcm',
+      "Si le chemin est un fichier vide|Si le chemin est exécutable|Si le chemin est protégé|Si le chemin est un dossier",
+      '3',
+      "-f teste un fichier, -e l'existence.",
+    ]),
   ],
   exercises: [
     ex(
@@ -368,6 +400,22 @@ Course _bashLoops() => Course(
       'done|fi|esac|end',
       '0',
       'Les boucles se terminent par done.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait while [ \$n -lt 5 ] ?",
+      'qcm',
+      "Répète tant que n est inférieur à 5|Répète tant que n est égal à 5|Répète exactement 5 fois|S'arrête si n est inférieur à 5",
+      '0',
+      "-lt signifie less than (inférieur à).",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : while IFS= read -r ligne; do ...; done < fichier lit un fichier ligne par ligne.",
+      'tf',
+      'Vrai',
+      null,
+      "Le < envoie le fichier dans la boucle.",
     ]),
   ],
   exercises: [
@@ -461,6 +509,22 @@ Course _bashFunctions() => Course(
       '0',
       'On écrit nom() { commandes }.',
     ]),
+    q(const [
+      'q2',
+      "Dans une fonction, que désigne \$1 ?",
+      'qcm',
+      "Le premier argument du script|Le nom de la fonction appelée en dernier|Le premier argument de la fonction|Le code de retour",
+      '2',
+      "Les arguments positionnels deviennent ceux de la fonction.",
+    ]),
+    q(const [
+      'q3',
+      "Que fait resultat=\$(est_pair 4) ?",
+      'qcm',
+      "Définit une nouvelle fonction|Compare resultat à est_pair|Enregistre le code de retour|Capture la sortie de la fonction",
+      '3',
+      "\$(...) récupère ce que la commande affiche.",
+    ]),
   ],
   exercises: [
     ex(
@@ -542,6 +606,22 @@ Course _bashArguments() => Course(
       '0',
       '\$# compte les arguments.',
     ]),
+    q(const [
+      'q2',
+      "Que contient \$0 dans un script ?",
+      'qcm',
+      "Le nom du script|Le premier argument|Le nombre d'arguments|Le code de retour",
+      '0',
+      "\$1 est le premier argument, \$# leur nombre.",
+    ]),
+    q(const [
+      'q3',
+      "Que fait shift ?",
+      'qcm',
+      "Trie les arguments par ordre alphabétique|Décale les arguments (\$2 devient \$1)|Supprime tous les arguments|Affiche l'aide du script",
+      '1',
+      "Utile pour traiter une liste d'arguments un par un.",
+    ]),
   ],
   exercises: [
     ex(
@@ -593,7 +673,7 @@ Course _bashFiles() => Course(
     sec('Exemple d\'analyse', [
       code(
         'grep "Failed" /var/log/auth.log \\\n'
-        '  | cut -d" " -f10- | sort | uniq -c | sort -nr\n'
+        '  | grep -oE "[0-9]+(\\.[0-9]+){3}" | sort | uniq -c | sort -nr\n'
         '# extrait les IP et compte les échecs',
         label: 'Mini-pipeline',
       ),
@@ -613,6 +693,22 @@ Course _bashFiles() => Course(
       "ajouter à la fin du fichier|écraser le contenu du fichier|lire le fichier ligne par ligne|créer un dossier s'il n'existe pas",
       '0',
       '>> ajoute, > écrase.',
+    ]),
+    q(const [
+      'q2',
+      "Pourquoi utiliser sort avant uniq -c ?",
+      'qcm',
+      "uniq n'accepte que des fichiers triés par taille|sort supprime les lignes vides|uniq ne compare que des lignes voisines|sort compte déjà les lignes",
+      '2',
+      "Sans tri, des doublons éloignés seraient comptés séparément.",
+    ]),
+    q(const [
+      'q3',
+      "Que fait cut -d: -f1 /etc/passwd ?",
+      'qcm',
+      "Supprime la 1re ligne du fichier|Compte les deux-points|Affiche le 1er caractère|Affiche le 1er champ, séparé par :",
+      '3',
+      "On obtient les noms des comptes.",
     ]),
   ],
   exercises: [
@@ -676,7 +772,7 @@ Course _bashParsing() => Course(
       code(
         '# Compter les connexions réussies par IP\n'
         'grep "Accepted" /var/log/auth.log \\\n'
-        '  | awk \'{print \$9}\' \\\n'
+        '  | awk \'{print \$11}\' \\\n'
         '  | sort | uniq -c | sort -nr | head',
         label: 'Analyse IP',
       ),
@@ -696,6 +792,22 @@ Course _bashParsing() => Course(
       '\$1|\$0|NF|\$9',
       '0',
       '\$1 est le 1er champ, \$0 la ligne entière.',
+    ]),
+    q(const [
+      'q2',
+      "Que fait sed 's/admin/utilisateur/g' fichier ?",
+      'qcm',
+      "Remplace toutes les occurrences à l'affichage|Supprime du fichier les lignes contenant admin|Compte les occurrences de admin|Renomme le fichier en utilisateur",
+      '0',
+      "Le g remplace partout sur la ligne ; le fichier n'est pas modifié sans -i.",
+    ]),
+    q(const [
+      'q3',
+      "Dans awk, que représente \$0 ?",
+      'qcm',
+      "Le premier champ|La ligne entière|Le nombre de champs|Le nom du fichier",
+      '1',
+      "\$1 est le premier champ, NF leur nombre.",
     ]),
   ],
   exercises: [
@@ -781,6 +893,22 @@ Course _bashAutomation() => Course(
       '0',
       'set -e stoppe au premier échec.',
     ]),
+    q(const [
+      'q2',
+      "Quand s'exécute la tâche cron 30 2 * * * ?",
+      'qcm',
+      "Le 30 février|Toutes les 30 minutes|Chaque jour à 2 h 30|Le 2 du mois à 0 h 30",
+      '2',
+      "Ordre : minute, heure, jour, mois, jour de la semaine.",
+    ]),
+    q(const [
+      'q3',
+      "Que signifie 2>&1 ?",
+      'qcm',
+      "Lancer deux commandes en parallèle|Ignorer la première erreur, puis arrêter le script|Écrire dans un fichier nommé 1|Rediriger les erreurs vers la sortie standard",
+      '3',
+      "2 est la sortie d'erreur, 1 la sortie standard.",
+    ]),
   ],
   exercises: [
     ex(
@@ -826,7 +954,7 @@ Course _bashLogAnalysis() => Course(
         '#!/bin/bash\n'
         'LOG=/var/log/auth.log\n'
         'echo "=== Échecs de connexion par IP ==="\n'
-        'grep "Failed password" "\$LOG" | awk \'{print \$11}\' \\\n'
+        'grep "Failed password" "\$LOG" | awk \'{print \$(NF-3)}\' \\\n'
         '  | sort | uniq -c | sort -nr | head -10\n'
         'echo "=== Connexions réussies ==="\n'
         'grep "Accepted" "\$LOG" | tail -5',
@@ -856,6 +984,22 @@ Course _bashLogAnalysis() => Course(
       'beaucoup de "Failed password" depuis une même IP|un seul "Accepted publickey" depuis une IP connue|une rotation quotidienne du fichier de log|un redémarrage du service sshd après mise à jour',
       '0',
       'La répétition d\'échecs depuis une IP signe un brute-force.',
+    ]),
+    q(const [
+      'q2',
+      "Dans sort | uniq -c | sort -nr, à quoi sert le dernier sort -nr ?",
+      'qcm',
+      "Classer du plus fréquent au moins fréquent|Supprimer les lignes en double|Numéroter les lignes dans l'ordre du fichier|Retirer les lignes vides",
+      '0',
+      "-n : numérique ; -r : ordre décroissant.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : grep \"Accepted\" retrouve les connexions SSH réussies.",
+      'tf',
+      'Vrai',
+      null,
+      "Les échecs contiennent « Failed password ».",
     ]),
   ],
   exercises: [
@@ -945,6 +1089,22 @@ Course _bashAdmin() => Course(
       '0',
       'systemctl is-active vérifie l\'état d\'un service.',
     ]),
+    q(const [
+      'q2',
+      "Que fait \$(date +%F) dans un nom de fichier ?",
+      'qcm',
+      "Insère le nom de l'utilisateur|Crée un fichier temporaire|Insère la date du jour|Trie les fichiers par date",
+      '2',
+      "Le rapport porte ainsi la date, par exemple 2026-11-23.",
+    ]),
+    q(const [
+      'q3',
+      "Que teste [ \"\$usage\" -gt 85 ] ?",
+      'qcm',
+      "Si usage est inférieur à 85|Si usage est égal à 85|Si usage est vide|Si usage est supérieur à 85",
+      '3',
+      "-gt signifie greater than (supérieur à).",
+    ]),
   ],
   exercises: [
     ex(
@@ -976,7 +1136,7 @@ Course _bashAnalyzer() => Course(
     sec('Le script type', [
       code(
         '#!/bin/bash\n'
-        'echo "=== CyberCheck {date} ===\n"\n'
+        'echo "=== CyberCheck \$(date) ===\n"\n'
         '# 1. Utilisateurs connectés\n'
         'echo "[Utilisateurs connectés]"; who\n\n'
         '# 2. Connexions récentes\n'
@@ -1019,6 +1179,22 @@ Course _bashAnalyzer() => Course(
       "les ports TCP en écoute avec le processus|les connexions TCP fermées récemment|les utilisateurs connectés par SSH et leur IP|les fichiers ouverts par chaque utilisateur",
       '0',
       'ss -tlnp liste les ports TCP en écoute et le processus associé.',
+    ]),
+    q(const [
+      'q2',
+      "Que liste find /home -type f -mtime -1 ?",
+      'qcm',
+      "Les fichiers modifiés depuis moins de 24 h|Les fichiers qui n'ont pas changé depuis un an|Les dossiers vides de /home|Les fichiers d'un seul octet",
+      '0',
+      "-mtime -1 : moins d'un jour.",
+    ]),
+    q(const [
+      'q3',
+      "Que montre systemctl --failed ?",
+      'qcm',
+      "Les connexions refusées|Les services en échec|Les mots de passe erronés|Les fichiers supprimés",
+      '1',
+      "Un service en échec peut révéler un incident.",
     ]),
   ],
   exercises: [

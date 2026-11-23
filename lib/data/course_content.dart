@@ -62,7 +62,7 @@ Course _intro() => Course(
       ),
       list(
         '- Le coût mondial de la cybercriminalité se compte en milliers de milliards par an.\n'
-        '- 90% des attaques réussies commencent par une erreur humaine (phishing).\n'
+        '- Beaucoup d\'attaques réussies commencent par une erreur humaine (phishing).\n'
         '- La majorité des incidents pourraient être évités par de bonnes pratiques de base.',
       ),
     ]),
@@ -422,6 +422,22 @@ Course _redTeam() => Course(
       '1',
       'La Red Team joue le rôle de l\'attaquant pour renforcer la sécurité.',
     ]),
+    q(const [
+      'q2',
+      "Quel est le premier préalable à une opération Red Team ?",
+      'qcm',
+      "Une autorisation explicite et un cadre|Un antivirus désactivé sur les postes|Une annonce publique aux employés|Un accès administrateur au réseau",
+      '0',
+      "Sans autorisation, les mêmes techniques sont des infractions.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : la Red Team sert aussi à tester les réactions des équipes de défense.",
+      'tf',
+      'Vrai',
+      null,
+      "Elle mesure la détection et la réponse, pas seulement les failles.",
+    ]),
   ],
   exercises: [
     ex(
@@ -484,6 +500,22 @@ Course _blueTeam() => Course(
       "simule des attaques pour l'entreprise|achète des failles à des chercheurs|défend et surveille les systèmes|développe les logiciels de l'entreprise",
       '2',
       'La Blue Team est la défense : surveillance, détection et réponse.',
+    ]),
+    q(const [
+      'q2',
+      "Quel outil collecte et analyse les journaux de toute l'organisation ?",
+      'qcm',
+      "Un VPN|Un proxy|Un SIEM|Un NAT",
+      '2',
+      "Le SIEM centralise les journaux et lève des alertes.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : renforcer la configuration des systèmes ne fait pas partie des missions de la Blue Team.",
+      'tf',
+      'Faux',
+      null,
+      "Le durcissement fait partie de la défense, avec la surveillance et la réponse.",
     ]),
   ],
   exercises: [
@@ -561,6 +593,22 @@ Course _pentest() => Course(
       '1',
       'La différence clé est le cadre : autorisation écrite et périmètre défini.',
     ]),
+    q(const [
+      'q2',
+      "Dans un pentest en boîte noire, le testeur...",
+      'qcm',
+      "ne connaît pas le système à l'avance|dispose du code source complet|travaille sans aucune autorisation|administre déjà les serveurs testés",
+      '0',
+      "Il part des mêmes informations qu'un attaquant extérieur.",
+    ]),
+    q(const [
+      'q3',
+      "Quel est le principal livrable d'un pentest ?",
+      'qcm',
+      "Une liste de mots de passe à conserver|Un rapport avec preuves et recommandations|Un antivirus installé sur chaque poste|Une démonstration publique des failles",
+      '1',
+      "Le rapport décrit les failles, leur impact et la façon de les corriger.",
+    ]),
   ],
   exercises: [
     ex('Réflexion', 'Citez les 4 grandes étapes d\'un pentest dans l\'ordre.'),
@@ -628,6 +676,22 @@ Course _soc() => Course(
       '1',
       'Le SOC surveille en continu et répond aux incidents de sécurité.',
     ]),
+    q(const [
+      'q2',
+      "Que fait en premier lieu un analyste SOC de niveau 1 ?",
+      'qcm',
+      "La chasse aux menaces|L'analyse forensique|Le triage des alertes|La réécriture du SIEM",
+      '2',
+      "Le niveau 1 classe les alertes ; les niveaux 2 et 3 approfondissent.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : le threat hunting consiste à rechercher des menaces sans attendre une alerte.",
+      'tf',
+      'Vrai',
+      null,
+      "C'est une démarche proactive, souvent menée par le niveau 3.",
+    ]),
   ],
   exercises: [
     ex(
@@ -669,7 +733,7 @@ Course _vulnerabilite() => Course(
         'Les vulnérabilités connues sont référencées sous un identifiant unique : le CVE (Common Vulnerabilities and Exposures), par exemple CVE-2021-44228 (Log4Shell).',
       ),
       text(
-        'Le score CVSS (Common Vulnerability Scoring System) évalue la gravité d\'une vulnérabilité de 0 à 10. Au-delà de 7, on parle souvent de vulnérabilité critique.',
+        'Le score CVSS (Common Vulnerability Scoring System) évalue la gravité d\'une vulnérabilité de 0 à 10. De 7,0 à 8,9, la gravité est élevée ; à partir de 9,0, elle est critique (CVSS v3).',
       ),
     ]),
     sec('De la vulnérabilité à la correction', [
@@ -695,6 +759,22 @@ Course _vulnerabilite() => Course(
       "une faiblesse exploitable|un programme malveillant|une attaque en cours|un correctif de sécurité",
       '0',
       'C\'est une faiblesse qui peut être exploitée.',
+    ]),
+    q(const [
+      'q2',
+      "Qu'est-ce qu'un exploit ?",
+      'qcm',
+      "Un moyen d'utiliser une vulnérabilité|Un correctif publié par l'éditeur|Un score de gravité de 0 à 10|Un inventaire des logiciels installés",
+      '0',
+      "L'exploit tire parti de la faiblesse ; le correctif la supprime.",
+    ]),
+    q(const [
+      'q3',
+      "À quoi sert un identifiant CVE ?",
+      'qcm',
+      "À mesurer la gravité d'une faille|À désigner une vulnérabilité connue|À chiffrer un rapport d'audit|À identifier un attaquant précis",
+      '1',
+      "CVE nomme la vulnérabilité ; CVSS en mesure la gravité.",
     ]),
   ],
   exercises: [
@@ -759,6 +839,22 @@ Course _malware() => Course(
       'il se propage seul par le réseau|il est plus petit|il est sans danger|il ne peut pas se propager',
       '0',
       'Le ver se propage automatiquement par le réseau, sans action de la victime.',
+    ]),
+    q(const [
+      'q2',
+      "Quel malware se fait passer pour un logiciel légitime ?",
+      'qcm',
+      "Un ver réseau|Un enregistreur de frappe|Un cheval de Troie|Un rançongiciel",
+      '2',
+      "Le trojan compte sur l'utilisateur pour être installé.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : un keylogger enregistre ce que vous tapez au clavier.",
+      'tf',
+      'Vrai',
+      null,
+      "Il vise notamment les mots de passe.",
     ]),
   ],
   exercises: [
@@ -826,6 +922,22 @@ Course _phishing() => Course(
       '0',
       'L\'urgence et la demande de secrets sont les marqueurs du phishing.',
     ]),
+    q(const [
+      'q2',
+      "Que faire si un message de votre banque vous semble douteux ?",
+      'qcm',
+      "Contacter la banque par un autre canal|Répondre au message pour demander une preuve|Cliquer pour examiner le site|Transférer le lien à vos proches",
+      '0',
+      "Le message lui-même ne prouve rien : on vérifie ailleurs.",
+    ]),
+    q(const [
+      'q3',
+      "Vous avez saisi votre mot de passe sur un faux site. Que faire d'abord ?",
+      'qcm',
+      "Attendre de voir si un problème survient|Changer ce mot de passe et activer le 2FA|Supprimer le message et ne rien dire|Vider le cache de votre navigateur",
+      '1',
+      "Le mot de passe est compromis : il faut le rendre inutilisable.",
+    ]),
   ],
   exercises: [
     ex(
@@ -890,6 +1002,22 @@ Course _ransomware() => Course(
       'payer vite la rançon|des sauvegardes régulières et hors ligne|désactiver l\'antivirus|ouvrir toutes les pièces jointes',
       '1',
       'Les sauvegardes hors ligne permettent de restaurer sans payer.',
+    ]),
+    q(const [
+      'q2',
+      "Que faire d'abord sur un poste en cours de chiffrement ?",
+      'qcm',
+      "Payer la rançon demandée|Relancer une sauvegarde|Le déconnecter du réseau|Installer un antivirus",
+      '2',
+      "On empêche la propagation aux autres machines et aux partages.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : payer la rançon garantit de récupérer ses fichiers.",
+      'tf',
+      'Faux',
+      null,
+      "Il n'y a aucune garantie, et cela finance les attaquants.",
     ]),
   ],
   exercises: [
@@ -957,6 +1085,22 @@ Course _securiteNumerique() => Course(
       'cour et simple|long et unique par service|le même partout|une date de naissance',
       '1',
       'Un mot de passe fort est long, unique, imprévisible, et propre à chaque service.',
+    ]),
+    q(const [
+      'q2',
+      "Que protège la double authentification si votre mot de passe fuit ?",
+      'qcm',
+      "L'accès à votre compte|Le contenu de vos e-mails envoyés|La vitesse de votre connexion|Les fichiers de votre disque dur",
+      '0',
+      "Le mot de passe seul ne suffit plus pour se connecter.",
+    ]),
+    q(const [
+      'q3',
+      "Vrai ou faux : réutiliser un même mot de passe fort sur plusieurs sites est sans risque.",
+      'tf',
+      'Faux',
+      null,
+      "Si un site fuit, tous les autres comptes sont exposés.",
     ]),
   ],
   exercises: [
