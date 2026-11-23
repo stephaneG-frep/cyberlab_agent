@@ -437,7 +437,7 @@ void main() {
     );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
-    expect(find.textContaining(r'learner@cyberlab:~/logs$'), findsWidgets);
+    expect(find.text(r'~/logs$ '), findsWidgets);
     await tester.enterText(
       find.byKey(const ValueKey('terminal-input')),
       'grep -c Failed auth.log',
@@ -451,7 +451,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: TerminalScreen()));
     await tester.pumpAndSettle();
     expect(find.text('7'), findsOneWidget);
-    expect(find.textContaining(r'learner@cyberlab:~/logs$'), findsWidgets);
+    expect(find.text(r'~/logs$ '), findsWidgets);
   });
 }
 

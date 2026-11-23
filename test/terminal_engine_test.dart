@@ -26,6 +26,17 @@ void main() {
       expect(run('pwd'), '/');
     });
 
+    test('astuce de dossier courant pour un chemin relatif introuvable', () {
+      run('cd logs');
+      expect(t.shortPrompt, r'~/logs$');
+      expect(run('./scripts/scan_local.sh'), contains('vous êtes dans ~/logs'));
+      expect(run('cat notes.txt'), contains('cd ~'));
+      expect(run('cd logs'), contains('vous êtes dans ~/logs'));
+      expect(run('cat /absent'), isNot(contains('astuce')));
+      run('cd ~');
+      expect(run('cat absent'), isNot(contains('astuce')));
+    });
+
     test('erreurs de cd', () {
       expect(run('cd nulle_part'), contains('Aucun fichier ou dossier'));
       expect(run('cd notes.txt'), contains('N\'est pas un dossier'));

@@ -175,8 +175,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
             child: Row(
               children: [
                 Flexible(
+                  // Invite courte (dossier courant) : l'invite complète
+                  // figure sur chaque ligne de commande affichée.
                   child: Text(
-                    '${_engine.prompt} ',
+                    '${_engine.shortPrompt} ',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -191,6 +193,15 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     key: const ValueKey('terminal-input'),
                     controller: _controller,
                     autofocus: false,
+                    // Les claviers Android corrigent « auth.log » en
+                    // « Auth. log » : on désactive toute aide à la saisie.
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textCapitalization: TextCapitalization.none,
+                    smartQuotesType: SmartQuotesType.disabled,
+                    smartDashesType: SmartDashesType.disabled,
+                    keyboardType: TextInputType.visiblePassword,
+                    textInputAction: TextInputAction.send,
                     style: const TextStyle(
                       fontFamily: 'monospace',
                       color: Colors.greenAccent,
@@ -199,7 +210,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     decoration: const InputDecoration(
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 8),
-                      hintText: 'commande (ex: help, ls, nmap localhost)',
+                      hintText: 'commande (ex. help, ls)',
                       hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
                       filled: false,

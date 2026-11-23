@@ -441,6 +441,17 @@ class TerminalEngine {
     return cwd;
   }
 
+  /// Invite abrégée pour la zone de saisie : `~/logs\$`.
+  String get shortPrompt => '$displayCwd${user == 'root' ? '#' : r'$'}';
+
+  /// Astuce ajoutée quand un chemin RELATIF est introuvable : le dossier
+  /// courant est la cause la plus fréquente chez les débutants.
+  String _whereHint(String path) {
+    if (path.startsWith('/') || path.startsWith('~') || cwd == home) return '';
+    return '\n(astuce : vous êtes dans $displayCwd ; « cd ~ » ramène au '
+        'dossier personnel, « pwd » affiche le dossier courant)';
+  }
+
   String get prompt => '$user@$host:$displayCwd${user == 'root' ? '#' : r'$'}';
 
   void _resetSession() {
@@ -1053,13 +1064,19 @@ class TerminalEngine {
     }
     final inputs = <(String, String)>[];
     final err = StringBuffer();
+    String? hint;
     for (final f in files) {
       try {
         inputs.add((f, fs.readFile(_abs(f), user)));
       } on FsError catch (e) {
         err.writeln('$cmd: $f: ${e.message}');
+        if (e.message == VirtualFs.noSuchFile && hint == null) {
+          final h = _whereHint(f);
+          if (h.isNotEmpty) hint = h.substring(1);
+        }
       }
     }
+    if (hint != null) err.writeln(hint);
     return (inputs: inputs, err: err.toString());
   }
 
@@ -1422,7 +1439,10 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
         return _fail('bash: cd: $target: ${VirtualFs.denied}');
       }
     } on FsError catch (e) {
-      return _fail('bash: cd: $target: ${e.message}');
+      return _fail(
+        'bash: cd: $target: ${e.message}'
+        '${e.message == VirtualFs.noSuchFile ? _whereHint(target) : ''}',
+      );
     }
     _vars['OLDPWD'] = cwd;
     cwd = abs;
@@ -2475,7 +2495,11 @@ Lab        : labreset (restaure les fichiers d'origine)  clear  help
     try {
       n = fs.existing(abs, user);
     } on FsError catch (e) {
-      return _fail('bash: $path: ${e.message}', 127);
+      return _fail(
+        'bash: $path: ${e.message}'
+        '${e.message == VirtualFs.noSuchFile ? _whereHint(path) : ''}',
+        127,
+      );
     }
     if (n.isDir) return _fail('bash: $path: ${VirtualFs.isADir}', 126);
     if (direct && !VirtualFs.canExec(n, user)) {
