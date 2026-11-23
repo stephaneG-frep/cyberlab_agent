@@ -4,6 +4,7 @@ import '../models/user_state.dart';
 import '../services/app_state.dart';
 import '../widgets/common.dart';
 import '../widgets/path_picker.dart';
+import 'stats_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -127,6 +128,18 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              key: const ValueKey('open-stats'),
+              leading: const Icon(Icons.bar_chart),
+              title: const Text('Évolution dans le temps'),
+              subtitle: const Text('XP et temps, jour par jour'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
+            ),
+          ),
           Card(
             child: ListTile(
               leading: const Icon(Icons.timer_outlined),

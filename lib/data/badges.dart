@@ -3,7 +3,7 @@ import '../models/user_state.dart';
 /// A badge describes a condition and its medal. Evaluation happens in UI.
 class BadgeDef {
   final Badge badge;
-  final String type; // courses | ctf | level | soc | wireshark
+  final String type; // courses | ctf | level | soc | wireshark | scenario
   final String? category; // course category or ctf category
   final int threshold;
 
@@ -215,5 +215,16 @@ List<BadgeDef> badgeDefs() => [
     type: 'courses',
     category: 'windows',
     threshold: 4,
+  ),
+  BadgeDef(
+    badge: Badge(
+      id: 'b-scenario',
+      name: 'Enquêteur',
+      description: 'Terminez 3 scénarios guidés du Lab.',
+      icon: 'policy',
+      color: '#F44747',
+    ),
+    type: 'scenario',
+    threshold: 3,
   ),
 ];

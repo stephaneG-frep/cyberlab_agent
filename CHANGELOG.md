@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.6.0] - 2026-11-23
+
+### Quiz (correction importante)
+- Les options des QCM sont **mélangées** à chaque affichage. Dans les données, la bonne réponse était la première option dans 175 QCM sur 199 (88 %), et dans tous ceux ajoutés en 1.5.0 : cocher la première suffisait souvent. Les options « Aucune », « Rien… », « Toutes… » restent en dernier.
+- Limite connue : la bonne réponse est la plus longue (ou à égalité) dans 144 QCM sur 199 ; les textes sont à rééquilibrer.
+
+### Recherche
+- Nouvel écran de recherche dans le contenu des cours, les fiches, les challenges et les notes, avec extraits et filtres. Aucune réponse de quiz ni de CTF n'est indexée.
+- L'ancien bouton « Rechercher » fermait la fenêtre sans lancer la recherche.
+
+### Enquêtes guidées
+- L'onglet « Labs », dont les boutons n'avaient aucun effet, devient « Enquêtes » : 4 scénarios (force brute SSH, tunnel DNS, site web sondé, homme du milieu). Badge « Enquêteur ».
+- Recommencer une enquête n'efface pas les erreurs tant que ses XP n'ont pas été obtenus.
+
+### Statistiques
+- Journal quotidien (XP, temps, actions ; 400 jours conservés, passage de minuit réparti), inclus dans les exports. Écran « Évolution dans le temps » depuis le Profil.
+
+### Intégration continue
+- Un contrôle de `main` n'est plus annulé par une autre exécution ; `actions/checkout` et `actions/setup-java` passent en v5.
+
+### Tests
+- 394 tests (361 auparavant).
+
 ## [1.5.0] - 2026-11-23
 
 ### Nouveaux niveaux (40 cours, 135 au total)

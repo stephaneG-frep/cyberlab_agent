@@ -71,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lab').last);
       await tester.pumpAndSettle();
-      for (final tab in ['SOC', 'Labs', 'Réseau', 'Terminal']) {
+      for (final tab in ['SOC', 'Enquêtes', 'Réseau', 'Terminal']) {
         await tester.tap(find.text(tab).first);
         await tester.pumpAndSettle();
       }

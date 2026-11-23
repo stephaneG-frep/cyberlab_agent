@@ -501,7 +501,7 @@ class _CaptureLabState extends State<CaptureLab> {
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 4),
-        for (final p in _shown) _PacketRow(packet: p),
+        for (final p in _shown) PacketRow(packet: p),
       ],
     );
   }
@@ -516,9 +516,9 @@ Color _protocolColor(String protocol) => switch (protocol) {
   _ => const Color(0xFF4FC3B0),
 };
 
-class _PacketRow extends StatelessWidget {
+class PacketRow extends StatelessWidget {
   final Packet packet;
-  const _PacketRow({required this.packet});
+  const PacketRow({super.key, required this.packet});
 
   @override
   Widget build(BuildContext context) {

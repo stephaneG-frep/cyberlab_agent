@@ -55,6 +55,7 @@ class RewardKeys {
   static String ctf(String challengeId) => 'ctf:$challengeId';
   static String wireshark(String exerciseId) => 'ws:$exerciseId';
   static String terminal(String courseId) => 'term:$courseId';
+  static String scenario(String scenarioId) => 'scenario:$scenarioId';
 }
 
 /// Jour local au format AAAA-MM-JJ.
@@ -82,7 +83,46 @@ int? daysBetweenKeys(String from, String to) {
   return b.difference(a).inDays;
 }
 
+/// Activité d'une journée locale (statistiques dans le temps).
+class DayStats {
+  int xp;
+  int seconds;
+  int actions;
+  DayStats({this.xp = 0, this.seconds = 0, this.actions = 0});
+
+  int get minutes => seconds ~/ 60;
+
+  Map<String, int> toJson() => {'xp': xp, 's': seconds, 'a': actions};
+
+  static DayStats? fromJson(Object? v) {
+    if (v is! Map) return null;
+    int n(Object? x) => x is num && x > 0 ? x.toInt() : 0;
+    return DayStats(xp: n(v['xp']), seconds: n(v['s']), actions: n(v['a']));
+  }
+}
+
+/// Avancement d'un scénario guidé.
+class ScenarioProgress {
+  /// Nombre d'étapes réussies.
+  int step;
+
+  /// Mauvaises décisions (réduisent les XP du scénario).
+  int errors;
+  ScenarioProgress({this.step = 0, this.errors = 0});
+
+  Map<String, int> toJson() => {'step': step, 'errors': errors};
+
+  static ScenarioProgress? fromJson(Object? v) {
+    if (v is! Map) return null;
+    int n(Object? x) => x is num && x > 0 ? x.toInt() : 0;
+    return ScenarioProgress(step: n(v['step']), errors: n(v['errors']));
+  }
+}
+
 class UserState {
+  /// Nombre de jours conservés dans le journal quotidien.
+  static const maxLoggedDays = 400;
+
   /// Version du schéma de sauvegarde. 1 = données v1.0.0 (sans versions).
   static const currentSchema = 2;
 
@@ -106,6 +146,13 @@ class UserState {
   /// être validés, mais ne rapportent plus d'XP.
   Set<String> revealedChallenges;
 
+  /// Activité par jour local (AAAA-MM-JJ). Enregistrée depuis la v1.6.0 :
+  /// l'activité antérieure n'a pas été datée et ne peut pas être reconstituée.
+  Map<String, DayStats> dailyLog;
+
+  /// Avancement des scénarios guidés.
+  Map<String, ScenarioProgress> scenarios;
+
   /// Dernier jour local d'activité (AAAA-MM-JJ) pour la série.
   String? lastActiveDay;
 
@@ -126,6 +173,8 @@ class UserState {
     this.selectedPath = 'fundamentals',
     Set<String>? rewardedKeys,
     Set<String>? revealedChallenges,
+    Map<String, DayStats>? dailyLog,
+    Map<String, ScenarioProgress>? scenarios,
     this.lastActiveDay,
     this.schemaVersion = currentSchema,
   }) : completedCourses = completedCourses ?? [],
@@ -135,7 +184,9 @@ class UserState {
        badgesEarned = badgesEarned ?? {},
        skills = skills ?? {},
        rewardedKeys = rewardedKeys ?? {},
-       revealedChallenges = revealedChallenges ?? {} {
+       revealedChallenges = revealedChallenges ?? {},
+       dailyLog = dailyLog ?? {},
+       scenarios = scenarios ?? {} {
     level = LevelMath.levelFor(xp);
   }
 
@@ -289,6 +340,26 @@ class UserState {
 
   // ------------------------------------------------------------------ Série
 
+  /// Ajoute de l'activité à une journée, en bornant la taille du journal.
+  void logDay(String day, {int xp = 0, int seconds = 0, int actions = 0}) {
+    if (xp <= 0 && seconds <= 0 && actions <= 0) return;
+    final d = dailyLog.putIfAbsent(day, DayStats.new);
+    d
+      ..xp += xp
+      ..seconds += seconds
+      ..actions += actions;
+    if (dailyLog.length > maxLoggedDays) {
+      final keys = dailyLog.keys.toList()..sort();
+      for (final k in keys.take(dailyLog.length - maxLoggedDays)) {
+        dailyLog.remove(k);
+      }
+    }
+  }
+
+  /// Termine un scénario (une récompense par scénario).
+  int solveScenario(String id, int amount) =>
+      grant(RewardKeys.scenario(id), amount, skill: 'Réponse à incident');
+
   /// Enregistre une activité d'apprentissage. Retourne vrai si la série a
   /// changé. Un seul comptage par jour local.
   bool registerActivity(DateTime now) {
@@ -336,6 +407,8 @@ class UserState {
       'selectedPath': selectedPath,
       'rewardedKeys': rewardedKeys.toList()..sort(),
       'revealedChallenges': revealedChallenges.toList()..sort(),
+      'dailyLog': dailyLog.map((k, v) => MapEntry(k, v.toJson())),
+      'scenarios': scenarios.map((k, v) => MapEntry(k, v.toJson())),
     };
   }
 
@@ -381,6 +454,21 @@ class UserState {
         : asInt(j['learningMinutes'], 0) * 60;
 
     final lastDay = j['lastActiveDay'];
+    final log = <String, DayStats>{};
+    if (j['dailyLog'] case final Map raw) {
+      raw.forEach((k, v) {
+        final d = DayStats.fromJson(v);
+        // Une clé qui n'est pas une date est ignorée.
+        if (d != null && daysBetweenKeys('$k', '$k') == 0) log['$k'] = d;
+      });
+    }
+    final scenarios = <String, ScenarioProgress>{};
+    if (j['scenarios'] case final Map raw) {
+      raw.forEach((k, v) {
+        final p = ScenarioProgress.fromJson(v);
+        if (p != null) scenarios['$k'] = p;
+      });
+    }
 
     return UserState(
       name: j['name'] is String ? j['name'] as String : '',
@@ -398,6 +486,8 @@ class UserState {
           : 'fundamentals',
       rewardedKeys: rewarded,
       revealedChallenges: strList(j['revealedChallenges']).toSet(),
+      dailyLog: log,
+      scenarios: scenarios,
       lastActiveDay: lastDay is String ? lastDay : null,
       schemaVersion: currentSchema,
     );

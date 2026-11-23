@@ -3,11 +3,18 @@ import '../data/cheat_sheets.dart';
 import '../widgets/common.dart';
 
 class DocsScreen extends StatelessWidget {
-  const DocsScreen({super.key});
+  const DocsScreen({super.key, this.openSheetId});
+
+  /// Fiche à afficher en premier et dépliée (depuis la recherche).
+  final String? openSheetId;
 
   @override
   Widget build(BuildContext context) {
-    final sheets = cheatSheets();
+    final all = cheatSheets();
+    final sheets = [
+      ...all.where((s) => s.id == openSheetId),
+      ...all.where((s) => s.id != openSheetId),
+    ];
     return Scaffold(
       appBar: AppBar(title: const Text('Docs & Cheat Sheets')),
       body: ListView.separated(
@@ -18,6 +25,7 @@ class DocsScreen extends StatelessWidget {
           final s = sheets[i];
           return Card(
             child: ExpansionTile(
+              initiallyExpanded: s.id == openSheetId,
               leading: Icon(Icons.menu_book, color: CyberLabSeed.blue),
               title: Text(
                 s.title,

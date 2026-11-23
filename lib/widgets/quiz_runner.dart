@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/course.dart';
@@ -26,7 +27,26 @@ class QuizRunner extends StatefulWidget {
     required this.scopeId,
     this.skill,
     this.origins,
+    this.random,
   });
+
+  /// Générateur du mélange des options (injectable pour les tests).
+  final Random? random;
+
+  /// Ordre d'affichage des options d'un QCM. Les données placent souvent la
+  /// bonne réponse en premier : sans mélange, la position la trahirait. Les
+  /// options du type « Aucune », « Rien… », « Toutes… » restent en dernier.
+  static List<int> displayOrder(List<String> options, Random random) {
+    final tail = RegExp(
+      r'^(aucun|aucune|rien|toutes|tous|les deux)\b',
+      caseSensitive: false,
+    );
+    final all = List.generate(options.length, (i) => i);
+    final last = all.where((i) => tail.hasMatch(options[i].trim())).toList();
+    return all.where((i) => !last.contains(i)).toList()
+      ..shuffle(random)
+      ..addAll(last);
+  }
 
   @override
   State<QuizRunner> createState() => _QuizRunnerState();
@@ -40,6 +60,13 @@ class _QuizRunnerState extends State<QuizRunner> {
   bool _hintShown = false;
   bool _submitting = false;
   QuizOutcome? _outcome;
+  late final Random _random = widget.random ?? Random();
+
+  /// Ordre d'affichage des options de la question en cours.
+  List<int>? _order;
+
+  List<int> _optionOrder(QuizQuestion q) =>
+      _order ??= QuizRunner.displayOrder(q.options ?? const [], _random);
 
   bool get _answered => _outcome != null;
 
@@ -154,7 +181,7 @@ class _QuizRunnerState extends State<QuizRunner> {
             },
             child: Column(
               children: [
-                for (var i = 0; i < (q.options?.length ?? 0); i++)
+                for (final i in _optionOrder(q))
                   RadioListTile<String>(
                     title: Text(q.options![i]),
                     value: '$i',
@@ -233,6 +260,7 @@ class _QuizRunnerState extends State<QuizRunner> {
   }
 
   void _resetQuestionState() {
+    _order = null; // nouveau mélange à chaque question et à chaque essai
     _outcome = null;
     _selected = null;
     _free.clear(); // vide aussi le champ visible

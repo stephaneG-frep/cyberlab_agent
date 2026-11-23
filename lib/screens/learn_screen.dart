@@ -5,6 +5,7 @@ import '../services/app_state.dart';
 import '../widgets/common.dart';
 import 'course_view.dart';
 import 'review_screen.dart';
+import 'search_screen.dart';
 
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
@@ -17,7 +18,6 @@ class _LearnScreenState extends State<LearnScreen> {
   /// Catégorie choisie à la main ; null = celle du parcours.
   String? _picked;
   String? _pathSeen;
-  String _query = '';
 
   static const _cats = [
     ('fundamentals', 'Fondamentaux', Icons.auto_stories),
@@ -42,12 +42,7 @@ class _LearnScreenState extends State<LearnScreen> {
       _picked = null;
     }
     final category = _picked ?? app.currentPath.id;
-    var courses = CourseLibrary.byCategory(category);
-    if (_query.isNotEmpty) {
-      courses = courses
-          .where((c) => c.title.toLowerCase().contains(_query.toLowerCase()))
-          .toList();
-    }
+    final courses = CourseLibrary.byCategory(category);
 
     return Scaffold(
       appBar: AppBar(
@@ -66,9 +61,12 @@ class _LearnScreenState extends State<LearnScreen> {
             ),
           ),
           IconButton(
-            tooltip: 'Rechercher un cours',
+            key: const ValueKey('open-search'),
+            tooltip: 'Rechercher',
             icon: const Icon(Icons.search),
-            onPressed: () => _showSearch(context, app),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
           ),
         ],
       ),
@@ -100,23 +98,6 @@ class _LearnScreenState extends State<LearnScreen> {
               ),
             ),
           ),
-          if (_query.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text(
-                    'Résultats pour "$_query"',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => setState(() => _query = ''),
-                    child: const Text('Effacer'),
-                  ),
-                ],
-              ),
-            ),
           const SizedBox(height: 4),
           Expanded(
             child: courses.isEmpty
@@ -175,45 +156,6 @@ class _LearnScreenState extends State<LearnScreen> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showSearch(BuildContext context, AppState app) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Rechercher un cours',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onSubmitted: (v) {
-                  setState(() => _query = v);
-                  Navigator.pop(ctx);
-                },
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Rechercher'),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

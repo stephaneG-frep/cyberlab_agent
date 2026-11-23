@@ -362,6 +362,7 @@ Règles impératives :
   Future<int> _reward(int Function() mutation) async {
     await ready;
     final gained = mutation();
+    user.logDay(localDayKey(_clock()), xp: gained, actions: 1);
     final newDay = user.registerActivity(_clock());
     await _persistUser();
     if (newDay) await syncReminder();
@@ -454,6 +455,7 @@ Règles impératives :
   Future<void> recordAttempt(String courseId) async {
     await ready;
     user.courseAttempts[courseId] = (user.courseAttempts[courseId] ?? 0) + 1;
+    user.logDay(localDayKey(_clock()), actions: 1);
     final newDay = user.registerActivity(_clock());
     await _persistUser();
     if (newDay) await syncReminder();
@@ -462,10 +464,10 @@ Règles impératives :
   /// Activité d'apprentissage sans récompense (ex. CTF tenté).
   Future<void> registerActivity() async {
     await ready;
-    if (user.registerActivity(_clock())) {
-      await _persistUser();
-      await syncReminder();
-    }
+    user.logDay(localDayKey(_clock()), actions: 1);
+    final newDay = user.registerActivity(_clock());
+    await _persistUser();
+    if (newDay) await syncReminder();
   }
 
   // --------------------------------------------------- Rappel quotidien
@@ -560,9 +562,91 @@ Règles impératives :
     if (since == null) return;
     final now = _clock();
     final s = now.difference(since).inSeconds;
-    if (s > 0) user.learningSeconds += s;
+    if (s > 0) {
+      user.learningSeconds += s;
+      secondsByDay(
+        since,
+        now,
+      ).forEach((day, sec) => user.logDay(day, seconds: sec));
+    }
     _activeSince = stop ? null : now;
   }
+
+  /// Répartit une durée entre les journées locales (passage de minuit).
+  static Map<String, int> secondsByDay(DateTime from, DateTime to) {
+    final out = <String, int>{};
+    var a = from.toLocal();
+    final end = to.toLocal();
+    while (a.isBefore(end)) {
+      final midnight = DateTime(a.year, a.month, a.day + 1);
+      final b = midnight.isBefore(end) ? midnight : end;
+      final s = b.difference(a).inSeconds;
+      if (s > 0) out[localDayKey(a)] = (out[localDayKey(a)] ?? 0) + s;
+      a = b;
+    }
+    return out;
+  }
+
+  /// Activité des [days] derniers jours (aujourd'hui compris, du plus ancien
+  /// au plus récent), session en cours incluse ; jours vides à zéro.
+  List<({DateTime day, DayStats stats})> activity(int days) {
+    final now = _clock();
+    final since = _activeSince;
+    final pending = since == null
+        ? const <String, int>{}
+        : secondsByDay(since, now);
+    return [
+      for (var i = days - 1; i >= 0; i--)
+        () {
+          final day = DateTime(now.year, now.month, now.day - i);
+          final key = localDayKey(day);
+          final d = user.dailyLog[key];
+          return (
+            day: day,
+            stats: DayStats(
+              xp: d?.xp ?? 0,
+              seconds: (d?.seconds ?? 0) + (pending[key] ?? 0),
+              actions: d?.actions ?? 0,
+            ),
+          );
+        }(),
+    ];
+  }
+
+  // ------------------------------------------------- Scénarios guidés
+
+  ScenarioProgress scenarioProgress(String id) =>
+      user.scenarios[id] ?? ScenarioProgress();
+
+  /// Étape [step] (index) réussie : l'avancement ne recule jamais ici.
+  Future<void> completeScenarioStep(String id, int step) async {
+    await ready;
+    final p = user.scenarios.putIfAbsent(id, ScenarioProgress.new);
+    if (step + 1 <= p.step) return;
+    p.step = step + 1;
+    await registerActivity();
+  }
+
+  /// Mauvaise décision : réduit les XP du scénario.
+  Future<void> scenarioError(String id) async {
+    await ready;
+    user.scenarios.putIfAbsent(id, ScenarioProgress.new).errors++;
+    await _persistUser();
+  }
+
+  /// Recommence un scénario. Tant que ses XP n'ont pas été obtenus, les
+  /// erreurs sont conservées : recommencer ne les efface pas.
+  Future<void> restartScenario(String id) async {
+    await ready;
+    final p = user.scenarios[id];
+    if (p == null) return;
+    p.step = 0;
+    if (user.isRewarded(RewardKeys.scenario(id))) p.errors = 0;
+    await _persistUser();
+  }
+
+  Future<int> solveScenario(String id, int xp) =>
+      _reward(() => user.solveScenario(id, xp));
 
   /// Application au premier plan : le chronomètre démarre.
   void onAppResumed() {

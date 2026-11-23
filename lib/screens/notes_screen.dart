@@ -69,22 +69,22 @@ class NotesScreen extends StatelessWidget {
   void _openEditor(BuildContext context, AppState app, Note? existing) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _NoteEditor(note: existing, app: app),
+        builder: (_) => NoteEditor(note: existing, app: app),
       ),
     );
   }
 }
 
-class _NoteEditor extends StatefulWidget {
+class NoteEditor extends StatefulWidget {
   final Note? note;
   final AppState app;
-  const _NoteEditor({required this.note, required this.app});
+  const NoteEditor({super.key, required this.note, required this.app});
 
   @override
-  State<_NoteEditor> createState() => _NoteEditorState();
+  State<NoteEditor> createState() => _NoteEditorState();
 }
 
-class _NoteEditorState extends State<_NoteEditor> {
+class _NoteEditorState extends State<NoteEditor> {
   late final TextEditingController _title;
   late final TextEditingController _content;
   late String _category;
